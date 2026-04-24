@@ -105,7 +105,7 @@ describe('Google OAuth routes', () => {
   })
 
   describe('GET /api/auth/google/callback', () => {
-    it('exchanges the code, upserts the user, sets session cookie, and 302s /dashboard', async () => {
+    it('exchanges the code, upserts the user, sets session cookie, and 302s /onboarding', async () => {
       const tokenCalls: string[] = []
       server.use(
         http.post('https://oauth2.googleapis.com/token', async ({ request }) => {
@@ -126,7 +126,7 @@ describe('Google OAuth routes', () => {
       const res = await callbackGet(req)
 
       expect(res.status).toBe(302)
-      expect(res.headers.get('location')).toBe('http://localhost:3000/dashboard')
+      expect(res.headers.get('location')).toBe('http://localhost:3000/onboarding')
 
       const setCookie = res.headers.get('set-cookie')!
       expect(setCookie).toContain(`${SESSION_COOKIE}=`)
@@ -227,7 +227,7 @@ describe('Google OAuth routes', () => {
       const first = await callbackGet(
         new NextRequest(`http://localhost:3000/api/auth/google/callback?code=c&state=${nonce}`),
       )
-      expect(first.headers.get('location')).toBe('http://localhost:3000/dashboard')
+      expect(first.headers.get('location')).toBe('http://localhost:3000/onboarding')
 
       const second = await callbackGet(
         new NextRequest(`http://localhost:3000/api/auth/google/callback?code=c&state=${nonce}`),
@@ -318,12 +318,19 @@ describe('Google OAuth routes', () => {
       const res = await meGet(req)
       expect(res.status).toBe(200)
       const body = (await res.json()) as {
-        user: { id: string; email: string; displayName: string | null; pictureUrl: string | null }
+        user: {
+          id: string
+          email: string
+          displayName: string | null
+          pictureUrl: string | null
+          phoneNumber: string | null
+        }
       }
       expect(body.user.id).toBe(userId)
       expect(body.user.email).toBe('me@test.com')
       expect(body.user.displayName).toBe('Me Test')
       expect(body.user.pictureUrl).toBe('https://pic')
+      expect(body.user.phoneNumber).toBeNull()
     })
   })
 

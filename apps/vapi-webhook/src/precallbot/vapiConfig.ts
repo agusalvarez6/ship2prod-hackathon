@@ -31,18 +31,7 @@ export function buildGetNextMeetingToolConfig(options: ToolConfigOptions): JsonO
         "Retrieves the caller's next upcoming meeting, inferred attendee and company, and any generated PreCall briefing.",
       parameters: {
         type: 'object',
-        properties: {
-          userId: {
-            type: 'string',
-            description:
-              'Optional PreCall user UUID. Use this only when it is present in call metadata.',
-          },
-          email: {
-            type: 'string',
-            description:
-              'Optional PreCall account email. Use this only if the caller explicitly gives it or it is present in call metadata.',
-          },
-        },
+        properties: {},
         additionalProperties: false,
       },
     },

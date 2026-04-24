@@ -19,7 +19,7 @@ const NOTION_ERROR_COPY: Record<string, string> = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { notionConnected?: string; notionError?: string }
+  searchParams?: { notionConnected?: string; notionError?: string; onboarded?: string }
 }): Promise<JSX.Element> {
   const cookieStore = cookies()
   const token = cookieStore.get(SESSION_COOKIE)?.value
@@ -34,11 +34,13 @@ export default async function DashboardPage({
 
   const user = await getUserById(session.sub)
   if (!user) redirect('/')
+  if (!user.phone_number_e164) redirect('/onboarding')
 
   const notionToken = await getNotionToken(user.id)
   const notionConnected = Boolean(notionToken)
   const notionError = searchParams?.notionError ?? null
   const justConnected = searchParams?.notionConnected === '1'
+  const justOnboarded = searchParams?.onboarded === '1'
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-12">
@@ -76,10 +78,14 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 text-sm text-slate-700 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 text-sm text-slate-700 sm:grid-cols-4">
           <div>
             <dt className="text-xs uppercase tracking-wider text-slate-500">Google identity</dt>
             <dd className="mt-1 font-mono text-xs">{user.google_sub ?? '(not connected)'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wider text-slate-500">Caller ID</dt>
+            <dd className="mt-1 font-mono text-xs">{user.phone_number_e164}</dd>
           </div>
           <div>
             <dt className="text-xs uppercase tracking-wider text-slate-500">Calendar access</dt>
@@ -90,6 +96,13 @@ export default async function DashboardPage({
             <dd className="mt-1">{notionConnected ? 'Connected' : 'Not connected'}</dd>
           </div>
         </div>
+
+        {justOnboarded ? (
+          <div className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Phone access is connected. Calls from {user.phone_number_e164} will resolve to this
+            account.
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

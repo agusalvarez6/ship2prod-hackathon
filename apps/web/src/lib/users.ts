@@ -1,25 +1,26 @@
-import type { Pool } from "pg";
-import { getPool } from "./db.js";
+import type { Pool } from 'pg'
+import { getPool } from './db.js'
 
 export interface UserRow {
-  id: string;
-  email: string;
-  google_sub: string | null;
-  google_refresh_token: string | null;
-  google_access_token: string | null;
-  google_access_token_expires_at: string | null;
-  display_name: string | null;
-  picture_url: string | null;
+  id: string
+  email: string
+  phone_number_e164: string | null
+  google_sub: string | null
+  google_refresh_token: string | null
+  google_access_token: string | null
+  google_access_token_expires_at: string | null
+  display_name: string | null
+  picture_url: string | null
 }
 
 export interface UpsertGoogleUserInput {
-  googleSub: string;
-  email: string;
-  displayName: string | null;
-  pictureUrl: string | null;
-  refreshToken: string | null;
-  accessToken: string;
-  accessTokenExpiresAt: Date;
+  googleSub: string
+  email: string
+  displayName: string | null
+  pictureUrl: string | null
+  refreshToken: string | null
+  accessToken: string
+  accessTokenExpiresAt: Date
 }
 
 /**
@@ -52,13 +53,14 @@ export async function upsertUserByGoogleSub(
     RETURNING
       id,
       email,
+      phone_number_e164,
       google_sub,
       google_refresh_token,
       google_access_token,
       google_access_token_expires_at,
       display_name,
       picture_url
-  `;
+  `
   const values = [
     input.email,
     input.googleSub,
@@ -67,23 +69,42 @@ export async function upsertUserByGoogleSub(
     input.accessTokenExpiresAt.toISOString(),
     input.displayName,
     input.pictureUrl,
-  ];
-  const result = await pool.query<UserRow>(sql, values);
-  const row = result.rows[0];
-  if (!row) throw new Error("upsert returned no row");
-  return toUserRow(row);
+  ]
+  const result = await pool.query<UserRow>(sql, values)
+  const row = result.rows[0]
+  if (!row) throw new Error('upsert returned no row')
+  return toUserRow(row)
 }
 
 /** Returns the user row or `null` if no row matches. */
 export async function getUserById(userId: string, pool: Pool = getPool()): Promise<UserRow | null> {
   const result = await pool.query<UserRow>(
     `SELECT id, email, google_sub, google_refresh_token, google_access_token,
-            google_access_token_expires_at, display_name, picture_url
+            google_access_token_expires_at, display_name, picture_url, phone_number_e164
        FROM users WHERE id = $1`,
     [userId],
-  );
-  const row = result.rows[0];
-  return row ? toUserRow(row) : null;
+  )
+  const row = result.rows[0]
+  return row ? toUserRow(row) : null
+}
+
+/** Stores the caller ID number used to resolve inbound Vapi phone calls. */
+export async function updateUserPhoneNumber(
+  userId: string,
+  phoneNumberE164: string,
+  pool: Pool = getPool(),
+): Promise<UserRow> {
+  const result = await pool.query<UserRow>(
+    `UPDATE users
+        SET phone_number_e164 = $2
+      WHERE id = $1
+      RETURNING id, email, google_sub, google_refresh_token, google_access_token,
+                google_access_token_expires_at, display_name, picture_url, phone_number_e164`,
+    [userId, phoneNumberE164],
+  )
+  const row = result.rows[0]
+  if (!row) throw new Error('user not found')
+  return toUserRow(row)
 }
 
 /** Writes the fresh access token + new expiry without touching the refresh token. */
@@ -99,7 +120,7 @@ export async function updateAccessToken(
             google_access_token_expires_at = $3
       WHERE id = $1`,
     [userId, accessToken, expiresAt.toISOString()],
-  );
+  )
 }
 
 /** Nulls all Google OAuth columns. Used on disconnect and on `invalid_grant`. */
@@ -112,20 +133,20 @@ export async function clearUserTokens(userId: string, pool: Pool = getPool()): P
             google_access_token_expires_at = NULL
       WHERE id = $1`,
     [userId],
-  );
+  )
 }
 
 function toUserRow(raw: UserRow & { google_access_token_expires_at: unknown }): UserRow {
   // `pg` returns TIMESTAMPTZ as a JS Date; normalise to ISO string for consistency.
-  const expires = raw.google_access_token_expires_at as unknown;
-  let normalised: string | null = null;
+  const expires = raw.google_access_token_expires_at as unknown
+  let normalised: string | null = null
   if (expires instanceof Date) {
-    normalised = expires.toISOString();
-  } else if (typeof expires === "string") {
-    normalised = expires;
+    normalised = expires.toISOString()
+  } else if (typeof expires === 'string') {
+    normalised = expires
   }
   return {
     ...raw,
     google_access_token_expires_at: normalised,
-  };
+  }
 }
