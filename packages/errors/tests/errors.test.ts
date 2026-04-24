@@ -108,6 +108,24 @@ describe('isTransient', () => {
     ]
     for (const e of cases) expect(isTransient(e)).toBe(false)
   })
+
+  it('classifies each upstream service literal: transient on 503, permanent on 404', () => {
+    const services = [
+      'vapi',
+      'tinyfish',
+      'insforge',
+      'wundergraph',
+      'notion',
+      'gcal',
+      'openai',
+    ] as const
+    for (const service of services) {
+      const transient: AppError = { kind: 'upstream', service, status: 503 }
+      const permanent: AppError = { kind: 'upstream', service, status: 404 }
+      expect(isTransient(transient)).toBe(true)
+      expect(isTransient(permanent)).toBe(false)
+    }
+  })
 })
 
 describe('withRetry', () => {
