@@ -38,6 +38,7 @@ export interface BriefingDetail extends BriefingSummary {
 
 interface EnsureBriefingInput {
   userId: string;
+  userEmail: string | null;
   calendarEventId: string;
   title: string;
   startsAt: string;

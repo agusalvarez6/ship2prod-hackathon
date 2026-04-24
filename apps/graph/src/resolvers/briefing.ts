@@ -121,6 +121,7 @@ export const briefingResolvers = {
     args: {
       input: {
         userId: string
+        userEmail?: string | null
         calendarEventId: string
         title: string
         startsAt: string
@@ -130,7 +131,9 @@ export const briefingResolvers = {
     },
     ctx: { db: Pool; redis: Redis },
   ): Promise<Record<string, unknown>> => {
-    const { userId, calendarEventId, title, startsAt, attendees, description } = args.input
+    const { userId, userEmail, calendarEventId, title, startsAt, attendees, description } =
+      args.input
+    const hints = extractMeetingHints({ title, description, attendees, userEmail })
 
     const upsert = await ctx.db.query<{ id: string }>(
       `INSERT INTO meetings (user_id, calendar_event_id, title, starts_at, attendees, description)
@@ -162,13 +165,25 @@ export const briefingResolvers = {
 
     const briefingId = randomUUID()
     const inserted = await ctx.db.query<BriefingRow>(
-      `INSERT INTO briefings (id, user_id, meeting_id, status, sections, sources_count, created_at, updated_at)
-       VALUES ($1, $2, $3, 'pending', '{}'::jsonb, 0, now(), now())
+      `INSERT INTO briefings (
+         id, user_id, meeting_id, status,
+         contact_name, contact_email, company_name, company_domain,
+         sections, sources_count, created_at, updated_at
+       )
+       VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, '{}'::jsonb, 0, now(), now())
        RETURNING id, user_id, meeting_id, contact_name, contact_email, contact_role,
                  company_name, company_domain, company_summary, status, summary_60s,
                  sections, sources_count, error_message, research_started_at,
                  research_finished_at, created_at, updated_at`,
-      [briefingId, userId, meetingId],
+      [
+        briefingId,
+        userId,
+        meetingId,
+        hints.contactName,
+        hints.contactEmail,
+        hints.companyName,
+        hints.companyDomain,
+      ],
     )
 
     const payload: ResearchJobPayload = {
@@ -248,4 +263,144 @@ export const briefingResolvers = {
   draftFollowUpEmail: (): never => {
     throw new Error('not implemented in Phase 0')
   },
+}
+
+interface Attendee {
+  email: string | undefined
+  displayName: string | undefined
+}
+
+interface MeetingHints {
+  contactName: string | null
+  contactEmail: string | null
+  companyName: string | null
+  companyDomain: string | null
+}
+
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'yahoo.com',
+  'icloud.com',
+  'me.com',
+  'proton.me',
+  'protonmail.com',
+  'aol.com',
+])
+
+const GENERIC_TITLE_TOKENS = new Set([
+  'call',
+  'meeting',
+  'sync',
+  'standup',
+  'daily',
+  'weekly',
+  'review',
+  'intro',
+  'chat',
+  'catchup',
+  'catch-up',
+  '1:1',
+  '1on1',
+  'demo',
+  'discussion',
+  'kickoff',
+  'kick-off',
+  'with',
+  'and',
+  '&',
+  '-',
+])
+
+function extractMeetingHints(input: {
+  title: string
+  description: string | null | undefined
+  attendees: unknown
+  userEmail: string | null | undefined
+}): MeetingHints {
+  const attendees = normalizeAttendees(input.attendees)
+  const selfEmail = input.userEmail?.toLowerCase() ?? null
+
+  const others = attendees.filter((a) => {
+    const email = a.email?.toLowerCase()
+    return email && email !== selfEmail
+  })
+
+  const primary = others[0]
+  const contactEmail = primary?.email ?? null
+  let contactName = primary?.displayName?.trim() || nameFromEmail(primary?.email) || null
+  if (!contactName) contactName = contactNameFromTitle(input.title)
+
+  const haystack = `${input.title ?? ''} ${input.description ?? ''}`
+  let companyDomain = extractBusinessDomain(others.map((a) => a.email).filter(isString))
+  if (!companyDomain) companyDomain = extractDomainFromText(haystack)
+
+  const companyName = companyDomain ? companyNameFromDomain(companyDomain) : null
+
+  return { contactName, contactEmail, companyName, companyDomain }
+}
+
+function normalizeAttendees(raw: unknown): Attendee[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const e = entry as { email?: unknown; displayName?: unknown }
+      const email = typeof e.email === 'string' ? e.email : undefined
+      const displayName = typeof e.displayName === 'string' ? e.displayName : undefined
+      if (!email && !displayName) return null
+      return { email, displayName }
+    })
+    .filter((a): a is Attendee => a !== null)
+}
+
+function nameFromEmail(email: string | undefined): string | null {
+  if (!email) return null
+  const local = email.split('@')[0]
+  if (!local) return null
+  return local
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0]!.toUpperCase() + p.slice(1))
+    .join(' ')
+}
+
+function contactNameFromTitle(title: string): string | null {
+  if (!title) return null
+  const cleaned = title.replace(/[()\[\]{}]/g, ' ')
+  const tokens = cleaned.split(/\s+/).filter(Boolean)
+  const candidate = tokens.find(
+    (t) => /^[A-Z][a-z]{1,}$/.test(t) && !GENERIC_TITLE_TOKENS.has(t.toLowerCase()),
+  )
+  return candidate ?? null
+}
+
+function extractBusinessDomain(emails: string[]): string | null {
+  for (const email of emails) {
+    const at = email.indexOf('@')
+    if (at < 0) continue
+    const domain = email.slice(at + 1).toLowerCase()
+    if (!FREE_EMAIL_DOMAINS.has(domain)) return domain
+  }
+  return null
+}
+
+function extractDomainFromText(text: string): string | null {
+  const match = text.match(
+    /([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(?:com|io|ai|co|net|org|dev|app|xyz|so|me|tech|cloud))/i,
+  )
+  if (!match) return null
+  return match[1]!.toLowerCase()
+}
+
+function companyNameFromDomain(domain: string): string {
+  const root = domain.split('.')[0] ?? domain
+  return root[0]!.toUpperCase() + root.slice(1)
+}
+
+function isString(v: unknown): v is string {
+  return typeof v === 'string'
 }

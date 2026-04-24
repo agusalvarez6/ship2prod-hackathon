@@ -24,6 +24,7 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const briefing = await ensureBriefingForEvent({
     userId: session.sub,
+    userEmail: session.email ?? null,
     calendarEventId: body.calendarEventId,
     title: body.title,
     startsAt: body.startsAt,

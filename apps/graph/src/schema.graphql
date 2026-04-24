@@ -78,6 +78,7 @@ type SaveCallTranscriptResult {
 
 input EnsureBriefingForEventInput {
   userId: ID!
+  userEmail: String
   calendarEventId: String!
   title: String!
   startsAt: DateTime!
