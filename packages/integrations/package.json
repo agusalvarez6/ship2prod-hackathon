@@ -15,7 +15,8 @@
   "dependencies": {
     "@notionhq/client": "^2.2.15",
     "@ship2prod/errors": "workspace:*",
-    "@ship2prod/schema": "workspace:*"
+    "@ship2prod/schema": "workspace:*",
+    "@tiny-fish/cli": "^0.1.5"
   },
   "devDependencies": {
     "@types/node": "^20",

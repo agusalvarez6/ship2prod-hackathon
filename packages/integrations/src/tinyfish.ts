@@ -1,4 +1,7 @@
-import { err, ok, withRetry, type AppError, type Result } from '@ship2prod/errors'
+import { execFile } from 'node:child_process'
+import { createRequire } from 'node:module'
+import { dirname, resolve } from 'node:path'
+import { promisify } from 'node:util'
 
 export interface TinyFishFetchResult {
   url: string
@@ -18,70 +21,105 @@ export interface TinyFishClient {
 
 export interface TinyFishClientConfig {
   apiKey: string
-  baseUrl?: string
 }
 
-const DEFAULT_BASE_URL = 'https://api.tinyfish.io/v1'
+const execFileAsync = promisify(execFile)
 
-function resolveBaseUrl(config: TinyFishClientConfig): string {
-  return config.baseUrl ?? process.env.TINYFISH_API_URL ?? DEFAULT_BASE_URL
+// TinyFish is shipped as a CLI (@tiny-fish/cli). There is no REST API at
+// api.tinyfish.io. We spawn the bin via `node` and parse the JSON it prints
+// to stdout. Resolution starts from this file so the package's own
+// node_modules wins, regardless of which app spawned the worker.
+const require = createRequire(import.meta.url)
+
+let cachedBinPath: string | null = null
+function resolveTinyFishBin(): string {
+  if (cachedBinPath) return cachedBinPath
+  const pkgJson = require.resolve('@tiny-fish/cli/package.json')
+  cachedBinPath = resolve(dirname(pkgJson), 'dist/index.js')
+  return cachedBinPath
 }
 
-async function postJson<T>(
-  url: string,
-  apiKey: string,
-  body: unknown,
-): Promise<Result<T, AppError>> {
-  const response = await globalThis.fetch(url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
+async function runTinyFish(apiKey: string, args: string[]): Promise<unknown> {
+  const binPath = resolveTinyFishBin()
+  const { stdout } = await execFileAsync(process.execPath, [binPath, ...args], {
+    env: { ...process.env, TINYFISH_API_KEY: apiKey },
+    maxBuffer: 32 * 1024 * 1024,
+    timeout: 60_000,
   })
-  if (!response.ok) {
-    const retryAfter = response.headers.get('retry-after')
-    const retryAfterMs = retryAfter ? Number(retryAfter) * 1000 : undefined
-    return err<AppError>({
-      kind: 'upstream',
-      service: 'tinyfish',
-      status: response.status,
-      ...(retryAfterMs !== undefined && !Number.isNaN(retryAfterMs) ? { retryAfterMs } : {}),
-    })
-  }
-  const data = (await response.json()) as T
-  return ok(data)
+  const trimmed = stdout.trim()
+  if (!trimmed) throw new Error('tinyfish cli: empty stdout')
+  return JSON.parse(trimmed)
 }
 
-function unwrap<T>(result: Result<T, AppError>): T {
-  if (result.ok) return result.value
-  if (result.error.kind === 'upstream') {
-    throw new Error(`tinyfish upstream ${result.error.status}`)
-  }
-  throw new Error(`tinyfish ${result.error.kind}`)
+interface FetchCliItem {
+  url?: string
+  final_url?: string
+  title?: string
+  description?: string
+  text?: string
+}
+interface FetchCliResponse {
+  results?: FetchCliItem[]
+  errors?: Array<{ url?: string; error?: string }>
+}
+
+interface SearchCliItem {
+  url?: string
+  title?: string
+  snippet?: string
+  site_name?: string
+}
+interface SearchCliResponse {
+  results?: SearchCliItem[]
+}
+
+function joinFetchText(item: FetchCliItem): string {
+  return [item.title, item.description, item.text]
+    .filter((p): p is string => typeof p === 'string' && p.length > 0)
+    .join('\n\n')
 }
 
 export function createTinyFishClient(config: TinyFishClientConfig): TinyFishClient {
-  const baseUrl = resolveBaseUrl(config)
+  if (!config.apiKey) {
+    throw new Error('tinyfish: TINYFISH_API_KEY is required')
+  }
 
   return {
     async fetch(url: string): Promise<TinyFishFetchResult> {
-      const result = await withRetry<TinyFishFetchResult>(() =>
-        postJson<TinyFishFetchResult>(`${baseUrl}/extract`, config.apiKey, { url }),
-      )
-      return unwrap(result)
+      const raw = (await runTinyFish(config.apiKey, [
+        'fetch',
+        'content',
+        'get',
+        url,
+        '--format',
+        'markdown',
+      ])) as FetchCliResponse
+      const item = raw.results?.[0]
+      if (!item) {
+        const first = raw.errors?.[0]
+        throw new Error(
+          `tinyfish fetch: no results for ${url}${first?.error ? `: ${first.error}` : ''}`,
+        )
+      }
+      return {
+        url: item.final_url ?? item.url ?? url,
+        text: joinFetchText(item),
+        blocked: false,
+      }
     },
 
     async search(query: string): Promise<Array<TinyFishSearchResult>> {
-      const result = await withRetry<{ items: Array<TinyFishSearchResult> }>(() =>
-        postJson<{ items: Array<TinyFishSearchResult> }>(
-          `${baseUrl}/search`,
-          config.apiKey,
-          { query },
-        ),
-      )
-      return unwrap(result).items
+      const raw = (await runTinyFish(config.apiKey, [
+        'search',
+        'query',
+        query,
+      ])) as SearchCliResponse
+      return (raw.results ?? [])
+        .filter((r): r is SearchCliItem & { url: string } => typeof r.url === 'string')
+        .map((r) => ({
+          url: r.url,
+          snippet: [r.title, r.snippet].filter(Boolean).join(' — '),
+        }))
     },
   }
 }
