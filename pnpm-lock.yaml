@@ -66,6 +66,12 @@ importers:
 
   packages/errors: {}
 
+  packages/integrations:
+    dependencies:
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/schema:
     dependencies:
       zod:
