@@ -1,0 +1,15 @@
+mutation answerFromBriefing(
+  $briefingId: ID!
+  $mode: AnswerMode!
+  $input: String!
+  $callId: ID!
+) {
+  answerFromBriefing(
+    briefingId: $briefingId
+    mode: $mode
+    input: $input
+    callId: $callId
+  ) {
+    text
+  }
+}

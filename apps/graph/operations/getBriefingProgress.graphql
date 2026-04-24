@@ -1,0 +1,10 @@
+query getBriefingProgress($jobId: ID!) {
+  getBriefingProgress(jobId: $jobId) {
+    jobId
+    current {
+      step
+      pct
+      at
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "subgraphs": [
+    {
+      "id": "graph",
+      "name": "graph",
+      "routingUrl": "http://graph:4001/graphql"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+mutation createBriefingFromMeeting(
+  $userId: ID!
+  $meetingId: ID!
+  $notionPageIds: [ID!]!
+) {
+  createBriefingFromMeeting(
+    userId: $userId
+    meetingId: $meetingId
+    notionPageIds: $notionPageIds
+  ) {
+    briefingId
+    jobId
+    deduped
+  }
+}

@@ -1,0 +1,9 @@
+query listBriefings($userId: ID!, $limit: Int) {
+  listBriefings(userId: $userId, limit: $limit) {
+    id
+    title
+    companyName
+    status
+    createdAt
+  }
+}

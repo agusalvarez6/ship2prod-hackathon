@@ -1,0 +1,9 @@
+# Cosmo router subgraph composition. Image for the router container is
+# pinned in the top-level docker-compose.yml to a well-known tag.
+# TODO: pin router image by digest once the registry entry stabilizes.
+version: 1
+subgraphs:
+  - name: graph
+    routing_url: http://graph:4001/graphql
+    schema:
+      file: ../src/schema.graphql

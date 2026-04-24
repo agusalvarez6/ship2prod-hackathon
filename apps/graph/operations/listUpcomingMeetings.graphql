@@ -1,0 +1,7 @@
+query listUpcomingMeetings($userId: ID!, $limit: Int) {
+  listUpcomingMeetings(userId: $userId, limit: $limit) {
+    id
+    title
+    startsAt
+  }
+}
