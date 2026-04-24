@@ -1,0 +1,24 @@
+{
+  "name": "@ship2prod/vapi-webhook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.3",
+    "@ship2prod/schema": "workspace:*",
+    "@ship2prod/sdk": "workspace:*",
+    "hono": "^4.6.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
