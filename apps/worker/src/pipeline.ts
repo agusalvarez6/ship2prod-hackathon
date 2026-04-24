@@ -75,8 +75,18 @@ export async function runPipeline(job: ResearchJobPayload, deps: PipelineDeps): 
       at: now(),
     })
 
-    const results = await Promise.all(tasks.map((t) => runTask(t, deps.tinyfish)))
-    const sources = results.flat()
+    const settled = await Promise.allSettled(tasks.map((t) => runTask(t, deps.tinyfish)))
+    const sources: NormalizedSource[] = []
+    for (const [i, r] of settled.entries()) {
+      if (r.status === 'fulfilled') {
+        sources.push(...r.value)
+      } else {
+        const task = tasks[i]
+        const target = task?.kind === 'fetch' ? task.url : task?.kind === 'search' ? task.query : ''
+        const msg = r.reason instanceof Error ? r.reason.message : String(r.reason)
+        console.warn(`pipeline: research task failed (${task?.kind} ${target}): ${msg}`)
+      }
+    }
 
     await deps.emitProgress(job.briefingId, {
       step: 'synthesizing',
