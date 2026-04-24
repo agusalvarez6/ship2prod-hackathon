@@ -6,7 +6,8 @@ Shared error primitives for the PreCall stack.
 - `Result<T, E = AppError>` — tagged union plus `ok` / `err` helpers. Functions return `Result`; they do not throw for expected failures.
 - `isTransient(e)` — classifies `upstream` errors with status `408`, `429`, or `5xx` as transient.
 - `withRetry(op, opts)` — exponential backoff with jitter; honors `Retry-After` when upstream sets `retryAfterMs`; caps per-attempt delay at `capMs`.
-- `TransientError`, `PermanentError`, `UserInputError` — thin `Error` subclasses for callers that prefer throw/catch. Each exposes `toAppError()`.
+
+Single shape. No class-based taxonomy — callers return `Result<T, AppError>` and do not throw for expected failures.
 
 See `.claude/skills/errors/SKILL.md` for the full doctrine.
 
