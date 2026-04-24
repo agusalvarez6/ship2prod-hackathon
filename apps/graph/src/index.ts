@@ -5,7 +5,7 @@ import { serve } from '@hono/node-server'
 import { DateTimeResolver, JSONResolver } from 'graphql-scalars'
 import { createSchema, createYoga } from 'graphql-yoga'
 import { Hono } from 'hono'
-import { buildContext, type GraphContext } from './context.js'
+import { createBuildContext, type GraphContext } from './context.js'
 import { briefingResolvers } from './resolvers/briefing.js'
 import { meetingResolvers } from './resolvers/meeting.js'
 import { voiceResolvers } from './resolvers/voice.js'
@@ -33,6 +33,8 @@ const schema = createSchema<GraphContext>({
     },
   },
 })
+
+const buildContext = createBuildContext()
 
 const yoga = createYoga<GraphContext>({
   schema,
