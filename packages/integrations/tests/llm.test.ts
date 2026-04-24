@@ -14,7 +14,13 @@ afterAll(() => server.close())
 describe('createLLMClient.synthesize', () => {
   it('posts to Anthropic messages API and returns the first text block', async () => {
     let capturedHeaders: Record<string, string> = {}
-    let capturedBody: any = null
+    type CapturedBody = {
+      model?: string
+      max_tokens?: number
+      system?: string
+      messages?: Array<{ role: string; content: string }>
+    }
+    let capturedBody: CapturedBody = {}
 
     server.use(
       http.post(ANTHROPIC_URL, async ({ request }) => {
@@ -23,7 +29,7 @@ describe('createLLMClient.synthesize', () => {
           version: request.headers.get('anthropic-version') ?? '',
           contentType: request.headers.get('content-type') ?? '',
         }
-        capturedBody = await request.clone().json()
+        capturedBody = (await request.clone().json()) as CapturedBody
         return HttpResponse.json({
           content: [{ type: 'text', text: 'Acme sells widgets.' }],
         })

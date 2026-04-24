@@ -1,4 +1,4 @@
-import { err, ok, withRetry, type AppError, type Result } from '@ship2prod/errors'
+import { err, ok, withRetry, type AppError } from '@ship2prod/errors'
 
 export interface SynthesizerInput {
   system: string
