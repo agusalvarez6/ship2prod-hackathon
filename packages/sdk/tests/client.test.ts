@@ -14,7 +14,7 @@ describe('createPrecallClient', () => {
     server.use(
       http.post(`${ENDPOINT}/graphql`, async ({ request }) => {
         captured.auth = request.headers.get('authorization')
-        captured.body = (await request.json()) as CapturedBody
+        captured.body = (await request.clone().json()) as CapturedBody
         return HttpResponse.json({ data: { briefing: { id: FIXTURE_ID } } })
       }),
     )

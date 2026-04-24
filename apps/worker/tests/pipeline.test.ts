@@ -71,16 +71,12 @@ const localServer = setupServer(
       ],
     })
   }),
-  http.post('https://api.anthropic.com/v1/messages', () =>
-    HttpResponse.json({
-      id: 'msg_test',
-      type: 'message',
-      role: 'assistant',
-      content: [{ type: 'text', text: JSON.stringify(SAMPLE_SECTIONS) }],
-      model: 'claude-stub',
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 0, output_tokens: 0 },
-    }),
+  http.post(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+    () =>
+      HttpResponse.json({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(SAMPLE_SECTIONS) }] } }],
+      }),
   ),
 )
 
