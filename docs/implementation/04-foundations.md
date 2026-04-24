@@ -16,4 +16,4 @@ _Populated by engineering-manager-01 as SWEs complete their work._
 _Populated as inspectors run._
 
 ## PR
-_Populated after PR is opened._
+- #1 — https://github.com/agusalvarez6/ship2prod-hackathon/pull/1 (draft, opened 2026-04-24)
