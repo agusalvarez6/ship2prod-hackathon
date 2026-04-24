@@ -1,0 +1,6 @@
+mutation answerFromBriefing($briefingId: ID!, $question: String!) {
+  answerFromBriefing(briefingId: $briefingId, question: $question) {
+    text
+    citedSourceIds
+  }
+}

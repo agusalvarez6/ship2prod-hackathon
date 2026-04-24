@@ -1,0 +1,99 @@
+scalar JSON
+scalar DateTime
+
+enum BriefingStatus {
+  pending
+  researching
+  drafting
+  ready
+  failed
+}
+
+type Meeting {
+  id: ID!
+  title: String!
+  startsAt: DateTime!
+  attendees: JSON!
+  description: String
+}
+
+type NotionSearchResult {
+  pageId: ID!
+  pageTitle: String!
+  excerpt: String!
+  url: String
+}
+
+type Briefing {
+  id: ID!
+  userId: ID!
+  meetingId: ID
+  contactName: String
+  contactEmail: String
+  contactRole: String
+  companyName: String
+  companyDomain: String
+  companySummary: String
+  status: BriefingStatus!
+  summary60s: String
+  sections: JSON
+  sourcesCount: Int!
+  errorMessage: String
+  researchStartedAt: DateTime
+  researchFinishedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type BriefingListItem {
+  id: ID!
+  title: String!
+  companyName: String
+  status: BriefingStatus!
+  createdAt: DateTime!
+}
+
+type BriefingProgress {
+  jobId: ID!
+  step: String!
+  pct: Int!
+  detail: String
+  at: Int!
+  history: JSON!
+}
+
+type VoiceAnswer {
+  text: String!
+  citedSourceIds: [ID!]!
+}
+
+type FollowUpEmail {
+  subject: String!
+  body: String!
+}
+
+type SaveCallTranscriptResult {
+  id: ID!
+}
+
+type Query {
+  listUpcomingMeetings(limit: Int = 10): [Meeting!]!
+  searchNotionContext(query: String!, limit: Int = 5): [NotionSearchResult!]!
+  getBriefingProgress(briefingId: ID!): BriefingProgress!
+  getBriefing(id: ID!): Briefing!
+  listBriefings(limit: Int = 20): [BriefingListItem!]!
+}
+
+type Mutation {
+  createBriefingFromMeeting(meetingId: ID!): Briefing!
+  answerFromBriefing(briefingId: ID!, question: String!): VoiceAnswer!
+  draftFollowUpEmail(briefingId: ID!): FollowUpEmail!
+  saveCallTranscript(
+    briefingId: ID
+    vapiCallId: String!
+    recordingUrl: String
+    transcript: JSON!
+    startedAt: DateTime
+    endedAt: DateTime
+  ): SaveCallTranscriptResult!
+}
