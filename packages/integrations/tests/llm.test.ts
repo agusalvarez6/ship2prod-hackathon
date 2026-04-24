@@ -55,7 +55,7 @@ describe('createLLMClient.synthesize', () => {
         ],
       },
     ])
-    expect(capturedBody.generationConfig?.maxOutputTokens).toBe(2048)
+    expect(capturedBody.generationConfig?.maxOutputTokens).toBe(8192)
     expect(capturedBody.generationConfig?.temperature).toBe(0)
   })
 })
