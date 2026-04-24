@@ -14,5 +14,9 @@
   },
   "dependencies": {
     "@ship2prod/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "vitest": "^1"
   }
 }
