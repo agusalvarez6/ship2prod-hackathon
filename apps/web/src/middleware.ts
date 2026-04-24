@@ -38,5 +38,5 @@ function redirectToLogin(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/calendar/:path*'],
+  matcher: ['/dashboard/:path*', '/calendar/:path*', '/onboarding/:path*'],
 }

@@ -116,7 +116,6 @@ export default async function DashboardPage({
       <section className="mt-10 rounded-2xl border border-ink-200 bg-paper p-6 shadow-sm">
         <div className="flex items-center gap-4">
           {user.picture_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.picture_url}
               alt=""

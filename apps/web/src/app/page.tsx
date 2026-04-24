@@ -84,7 +84,7 @@ export default async function LandingPage({
           </a>
 
           <p className="mt-4 text-[11px] uppercase tracking-[0.18em] text-ink-500">
-            Read-only access · no calendar writes
+            Calendar access · disconnect anytime
           </p>
         </section>
       </div>

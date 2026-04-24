@@ -1,41 +1,44 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { SESSION_COOKIE, verifySession } from "@/lib/session";
-import { ensureAccessToken } from "@/lib/oauth";
-import { listUpcomingEvents, type UpcomingEvent } from "@/lib/calendar";
-import { EventRow } from "./EventRow";
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import { SESSION_COOKIE, verifySession } from '@/lib/session'
+import { ensureAccessToken } from '@/lib/oauth'
+import { getUserById } from '@/lib/users'
+import { listUpcomingEvents, type UpcomingEvent } from '@/lib/calendar'
+import { EventRow } from './EventRow'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
-type LoadResult =
-  | { kind: "ok"; events: UpcomingEvent[] }
-  | { kind: "error"; message: string };
+type LoadResult = { kind: 'ok'; events: UpcomingEvent[] } | { kind: 'error'; message: string }
 
 async function loadEvents(userId: string): Promise<LoadResult> {
   try {
-    const accessToken = await ensureAccessToken(userId);
-    const events = await listUpcomingEvents(accessToken, 20);
-    return { kind: "ok", events };
+    const accessToken = await ensureAccessToken(userId)
+    const events = await listUpcomingEvents(accessToken, 20)
+    return { kind: 'ok', events }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "unknown error";
-    return { kind: "error", message };
+    const message = err instanceof Error ? err.message : 'unknown error'
+    return { kind: 'error', message }
   }
 }
 
 export default async function CalendarPage(): Promise<JSX.Element> {
-  const cookieStore = cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) redirect("/");
+  const cookieStore = cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  if (!token) redirect('/')
 
-  let session;
+  let session
   try {
-    session = await verifySession(token);
+    session = await verifySession(token)
   } catch {
-    redirect("/");
+    redirect('/')
   }
 
-  const result = await loadEvents(session.sub);
+  const user = await getUserById(session.sub)
+  if (!user) redirect('/')
+  if (!user.phone_number_e164) redirect('/onboarding')
+
+  const result = await loadEvents(user.id)
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -56,7 +59,7 @@ export default async function CalendarPage(): Promise<JSX.Element> {
 
       <section className="mt-10">
         <h2 className="text-lg font-medium text-ink-900">Upcoming events</h2>
-        {result.kind === "error" ? (
+        {result.kind === 'error' ? (
           <div className="mt-4 rounded-lg border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-900">
             Could not load events: {result.message}
           </div>
@@ -71,5 +74,5 @@ export default async function CalendarPage(): Promise<JSX.Element> {
         )}
       </section>
     </main>
-  );
+  )
 }
