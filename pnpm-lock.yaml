@@ -142,10 +142,19 @@ importers:
       ioredis:
         specifier: ^5
         version: 5.10.1
+      pg:
+        specifier: ^8
+        version: 8.20.0
     devDependencies:
       '@types/node':
         specifier: ^20
         version: 20.19.39
+      '@types/pg':
+        specifier: ^8
+        version: 8.20.0
+      msw:
+        specifier: ^2
+        version: 2.13.6(@types/node@20.19.39)(typescript@5.9.3)
       typescript:
         specifier: ^5
         version: 5.9.3
