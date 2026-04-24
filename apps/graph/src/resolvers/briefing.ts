@@ -95,6 +95,146 @@ export const briefingResolvers = {
     return result.rows.map(rowToBriefing)
   },
 
+  getBriefingByEvent: async (
+    _parent: unknown,
+    args: { userId: string; calendarEventId: string },
+    ctx: { db: Pool },
+  ): Promise<Record<string, unknown> | null> => {
+    const result = await ctx.db.query<BriefingRow>(
+      `SELECT b.id, b.user_id, b.meeting_id, b.contact_name, b.contact_email, b.contact_role,
+              b.company_name, b.company_domain, b.company_summary, b.status, b.summary_60s,
+              b.sections, b.sources_count, b.error_message, b.research_started_at,
+              b.research_finished_at, b.created_at, b.updated_at
+         FROM briefings b
+         INNER JOIN meetings m ON b.meeting_id = m.id
+        WHERE m.user_id = $1 AND m.calendar_event_id = $2
+        ORDER BY b.created_at DESC
+        LIMIT 1`,
+      [args.userId, args.calendarEventId],
+    )
+    const row = result.rows[0]
+    return row ? rowToBriefing(row) : null
+  },
+
+  ensureBriefingForEvent: async (
+    _parent: unknown,
+    args: {
+      input: {
+        userId: string
+        userEmail?: string | null
+        calendarEventId: string
+        title: string
+        startsAt: string
+        attendees: unknown
+        description?: string | null
+        force?: boolean | null
+      }
+    },
+    ctx: { db: Pool; redis: Redis },
+  ): Promise<Record<string, unknown>> => {
+    const {
+      userId,
+      userEmail,
+      calendarEventId,
+      title,
+      startsAt,
+      attendees,
+      description,
+      force,
+    } = args.input
+    const hints = extractMeetingHints({ title, description, attendees, userEmail })
+
+    const upsert = await ctx.db.query<{ id: string }>(
+      `INSERT INTO meetings (user_id, calendar_event_id, title, starts_at, attendees, description)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+       ON CONFLICT (user_id, calendar_event_id) DO UPDATE
+         SET title = EXCLUDED.title,
+             starts_at = EXCLUDED.starts_at,
+             attendees = EXCLUDED.attendees,
+             description = EXCLUDED.description
+       RETURNING id`,
+      [
+        userId,
+        calendarEventId,
+        title,
+        startsAt,
+        JSON.stringify(attendees ?? []),
+        description ?? null,
+      ],
+    )
+    const meetingId = upsert.rows[0]?.id
+    if (!meetingId) throw new Error('meetings upsert returned no id')
+
+    if (!force) {
+      const existing = await ctx.db.query<BriefingRow>(
+        `SELECT id, user_id, meeting_id, contact_name, contact_email, contact_role,
+                company_name, company_domain, company_summary, status, summary_60s,
+                sections, sources_count, error_message, research_started_at,
+                research_finished_at, created_at, updated_at
+           FROM briefings
+          WHERE meeting_id = $1 AND status <> 'failed'
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [meetingId],
+      )
+      const existingRow = existing.rows[0]
+      if (existingRow) return rowToBriefing(existingRow)
+    }
+
+    return insertPendingBriefing(ctx, {
+      userId,
+      meetingId,
+      hints,
+    })
+  },
+
+  rerunBriefing: async (
+    _parent: unknown,
+    args: { briefingId: string },
+    ctx: { db: Pool; redis: Redis },
+  ): Promise<Record<string, unknown>> => {
+    const source = await ctx.db.query<{
+      user_id: string
+      meeting_id: string | null
+      user_email: string | null
+      meeting_title: string | null
+      meeting_starts_at: Date | null
+      meeting_attendees: unknown
+      meeting_description: string | null
+    }>(
+      `SELECT b.user_id,
+              b.meeting_id,
+              u.email AS user_email,
+              m.title AS meeting_title,
+              m.starts_at AS meeting_starts_at,
+              m.attendees AS meeting_attendees,
+              m.description AS meeting_description
+         FROM briefings b
+         LEFT JOIN users u ON u.id = b.user_id
+         LEFT JOIN meetings m ON m.id = b.meeting_id
+        WHERE b.id = $1`,
+      [args.briefingId],
+    )
+    const row = source.rows[0]
+    if (!row) throw new Error('briefing not found')
+    if (!row.meeting_id || !row.meeting_title) {
+      throw new Error('cannot rerun: briefing has no meeting row attached')
+    }
+
+    const hints = extractMeetingHints({
+      title: row.meeting_title,
+      description: row.meeting_description,
+      attendees: row.meeting_attendees,
+      userEmail: row.user_email,
+    })
+
+    return insertPendingBriefing(ctx, {
+      userId: row.user_id,
+      meetingId: row.meeting_id,
+      hints,
+    })
+  },
+
   createBriefingFromMeeting: async (
     _parent: unknown,
     args: { meetingId: string },
@@ -107,30 +247,11 @@ export const briefingResolvers = {
     const row = meeting.rows[0]
     if (!row) throw new Error('meeting not found')
 
-    const briefingId = randomUUID()
-    const inserted = await ctx.db.query<BriefingRow>(
-      `INSERT INTO briefings (id, user_id, meeting_id, status, sections, sources_count, created_at, updated_at)
-       VALUES ($1, $2, $3, 'pending', '{}'::jsonb, 0, now(), now())
-       RETURNING id, user_id, meeting_id, contact_name, contact_email, contact_role,
-                 company_name, company_domain, company_summary, status, summary_60s,
-                 sections, sources_count, error_message, research_started_at,
-                 research_finished_at, created_at, updated_at`,
-      [briefingId, row.user_id, args.meetingId],
-    )
-
-    const payload: ResearchJobPayload = {
-      jobId: randomUUID() as ResearchJobPayload['jobId'],
-      briefingId: briefingId as ResearchJobPayload['briefingId'],
-      userId: row.user_id as ResearchJobPayload['userId'],
-      meetingId: args.meetingId as ResearchJobPayload['meetingId'],
-      notionPageIds: [],
-      requestedAt: Date.now(),
-    }
-    await ctx.redis.lpush(REDIS_KEYS.jobs.pending, JSON.stringify(payload))
-
-    const briefingRow = inserted.rows[0]
-    if (!briefingRow) throw new Error('insert returned no row')
-    return rowToBriefing(briefingRow)
+    return insertPendingBriefing(ctx, {
+      userId: row.user_id,
+      meetingId: args.meetingId,
+      hints: { contactName: null, contactEmail: null, companyName: null, companyDomain: null },
+    })
   },
 
   getBriefingProgress: async (
@@ -157,4 +278,187 @@ export const briefingResolvers = {
   draftFollowUpEmail: (): never => {
     throw new Error('not implemented in Phase 0')
   },
+}
+
+// --- helpers ------------------------------------------------------------
+
+interface MeetingHints {
+  contactName: string | null
+  contactEmail: string | null
+  companyName: string | null
+  companyDomain: string | null
+}
+
+interface Attendee {
+  email: string | undefined
+  displayName: string | undefined
+}
+
+async function insertPendingBriefing(
+  ctx: { db: Pool; redis: Redis },
+  args: { userId: string; meetingId: string; hints: MeetingHints },
+): Promise<Record<string, unknown>> {
+  const briefingId = randomUUID()
+  const inserted = await ctx.db.query<BriefingRow>(
+    `INSERT INTO briefings (
+       id, user_id, meeting_id, status,
+       contact_name, contact_email, company_name, company_domain,
+       sections, sources_count, created_at, updated_at
+     )
+     VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, '{}'::jsonb, 0, now(), now())
+     RETURNING id, user_id, meeting_id, contact_name, contact_email, contact_role,
+               company_name, company_domain, company_summary, status, summary_60s,
+               sections, sources_count, error_message, research_started_at,
+               research_finished_at, created_at, updated_at`,
+    [
+      briefingId,
+      args.userId,
+      args.meetingId,
+      args.hints.contactName,
+      args.hints.contactEmail,
+      args.hints.companyName,
+      args.hints.companyDomain,
+    ],
+  )
+
+  const payload: ResearchJobPayload = {
+    jobId: randomUUID() as ResearchJobPayload['jobId'],
+    briefingId: briefingId as ResearchJobPayload['briefingId'],
+    userId: args.userId as ResearchJobPayload['userId'],
+    meetingId: args.meetingId as ResearchJobPayload['meetingId'],
+    notionPageIds: [],
+    requestedAt: Date.now(),
+  }
+  await ctx.redis.lpush(REDIS_KEYS.jobs.pending, JSON.stringify(payload))
+
+  const row = inserted.rows[0]
+  if (!row) throw new Error('insert returned no row')
+  return rowToBriefing(row)
+}
+
+const FREE_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'yahoo.com',
+  'icloud.com',
+  'me.com',
+  'proton.me',
+  'protonmail.com',
+  'aol.com',
+])
+
+const GENERIC_TITLE_TOKENS = new Set([
+  'call',
+  'meeting',
+  'sync',
+  'standup',
+  'daily',
+  'weekly',
+  'review',
+  'intro',
+  'chat',
+  'catchup',
+  'catch-up',
+  '1:1',
+  '1on1',
+  'demo',
+  'discussion',
+  'kickoff',
+  'kick-off',
+  'with',
+  'and',
+  '&',
+])
+
+function extractMeetingHints(input: {
+  title: string
+  description: string | null | undefined
+  attendees: unknown
+  userEmail: string | null | undefined
+}): MeetingHints {
+  const attendees = normalizeAttendees(input.attendees)
+  const selfEmail = input.userEmail?.toLowerCase() ?? null
+
+  const others = attendees.filter((a) => {
+    const email = a.email?.toLowerCase()
+    return email && email !== selfEmail
+  })
+
+  const primary = others[0]
+  const contactEmail = primary?.email ?? null
+  let contactName = primary?.displayName?.trim() || nameFromEmail(primary?.email) || null
+  if (!contactName) contactName = contactNameFromTitle(input.title)
+
+  const haystack = `${input.title ?? ''} ${input.description ?? ''}`
+  let companyDomain = extractBusinessDomain(others.map((a) => a.email).filter(isString))
+  if (!companyDomain) companyDomain = extractDomainFromText(haystack)
+
+  const companyName = companyDomain ? companyNameFromDomain(companyDomain) : null
+
+  return { contactName, contactEmail, companyName, companyDomain }
+}
+
+function normalizeAttendees(raw: unknown): Attendee[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const e = entry as { email?: unknown; displayName?: unknown }
+      const email = typeof e.email === 'string' ? e.email : undefined
+      const displayName = typeof e.displayName === 'string' ? e.displayName : undefined
+      if (!email && !displayName) return null
+      return { email, displayName }
+    })
+    .filter((a): a is Attendee => a !== null)
+}
+
+function nameFromEmail(email: string | undefined): string | null {
+  if (!email) return null
+  const local = email.split('@')[0]
+  if (!local) return null
+  return local
+    .replace(/[._-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0]!.toUpperCase() + p.slice(1))
+    .join(' ')
+}
+
+function contactNameFromTitle(title: string): string | null {
+  if (!title) return null
+  const cleaned = title.replace(/[()\[\]{}]/g, ' ')
+  const tokens = cleaned.split(/\s+/).filter(Boolean)
+  const candidate = tokens.find(
+    (t) => /^[A-Z][a-z]{1,}$/.test(t) && !GENERIC_TITLE_TOKENS.has(t.toLowerCase()),
+  )
+  return candidate ?? null
+}
+
+function extractBusinessDomain(emails: string[]): string | null {
+  for (const email of emails) {
+    const at = email.indexOf('@')
+    if (at < 0) continue
+    const domain = email.slice(at + 1).toLowerCase()
+    if (!FREE_EMAIL_DOMAINS.has(domain)) return domain
+  }
+  return null
+}
+
+function extractDomainFromText(text: string): string | null {
+  const match = text.match(
+    /([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(?:com|io|ai|co|net|org|dev|app|xyz|so|me|tech|cloud))/i,
+  )
+  if (!match) return null
+  return match[1]!.toLowerCase()
+}
+
+function companyNameFromDomain(domain: string): string {
+  const root = domain.split('.')[0] ?? domain
+  return root[0]!.toUpperCase() + root.slice(1)
+}
+
+function isString(v: unknown): v is string {
+  return typeof v === 'string'
 }

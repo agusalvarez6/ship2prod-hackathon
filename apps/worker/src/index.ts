@@ -38,8 +38,13 @@ async function main(): Promise<void> {
       if (briefingId) {
         try {
           await pool.query(
-            `UPDATE briefings SET status = 'failed', updated_at = now() WHERE id = $1`,
-            [briefingId],
+            `UPDATE briefings
+                SET status = 'failed',
+                    error_message = $2,
+                    research_finished_at = now(),
+                    updated_at = now()
+              WHERE id = $1`,
+            [briefingId, msg.slice(0, 2000)],
           )
         } catch (updateErr) {
           console.error('worker: also failed to mark briefing failed:', updateErr)

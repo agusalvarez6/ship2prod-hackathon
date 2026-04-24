@@ -76,16 +76,30 @@ type SaveCallTranscriptResult {
   id: ID!
 }
 
+input EnsureBriefingForEventInput {
+  userId: ID!
+  userEmail: String
+  calendarEventId: String!
+  title: String!
+  startsAt: DateTime!
+  attendees: JSON!
+  description: String
+  force: Boolean
+}
+
 type Query {
   listUpcomingMeetings(limit: Int = 10): [Meeting!]!
   searchNotionContext(query: String!, limit: Int = 5): [NotionSearchResult!]!
   getBriefingProgress(briefingId: ID!): BriefingProgress!
-  getBriefing(id: ID!): Briefing!
-  listBriefings(limit: Int = 20): [BriefingListItem!]!
+  getBriefing(id: ID!): Briefing
+  getBriefingByEvent(userId: ID!, calendarEventId: String!): Briefing
+  listBriefings(userId: ID, limit: Int = 20): [Briefing!]!
 }
 
 type Mutation {
   createBriefingFromMeeting(meetingId: ID!): Briefing!
+  ensureBriefingForEvent(input: EnsureBriefingForEventInput!): Briefing!
+  rerunBriefing(briefingId: ID!): Briefing!
   answerFromBriefing(briefingId: ID!, question: String!): VoiceAnswer!
   draftFollowUpEmail(briefingId: ID!): FollowUpEmail!
   saveCallTranscript(
