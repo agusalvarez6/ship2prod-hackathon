@@ -1,0 +1,17 @@
+node_modules
+dist
+.next
+out
+coverage
+.turbo
+.pnpm-store
+pnpm-lock.yaml
+*.min.js
+*.min.css
+
+# Docs authored outside Prettier scope.
+docs/**
+CLAUDE.md
+CRITERIA.md
+IDEA.md
+SPONSORS.md
