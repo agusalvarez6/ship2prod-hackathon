@@ -16,14 +16,19 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest",
-    "test:run": "vitest --run"
+    "test:run": "vitest --run",
+    "test:docker:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "test:docker:down": "docker compose -f docker-compose.test.yml down -v --remove-orphans"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
     "@types/node": "^20.14.0",
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
+    "execa": "^9.6.1",
     "globals": "^15.11.0",
+    "ioredis": "^5.10.1",
+    "msw": "^2.13.6",
     "prettier": "^3.3.3",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.8.0",
