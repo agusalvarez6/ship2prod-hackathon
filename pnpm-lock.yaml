@@ -142,6 +142,9 @@ importers:
 
   packages/integrations:
     dependencies:
+      '@ship2prod/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@ship2prod/schema':
         specifier: workspace:*
         version: link:../schema
@@ -149,6 +152,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.39
+      msw:
+        specifier: ^2
+        version: 2.13.6(@types/node@20.19.39)(typescript@5.9.3)
       vitest:
         specifier: ^1
         version: 1.6.1(@types/node@20.19.39)
