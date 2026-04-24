@@ -5,7 +5,12 @@ export const UsersRowSchema = z
   .object({
     id: z.string().uuid(),
     email: z.string().email(),
+    google_sub: z.string().nullable(),
     google_refresh_token: z.string().nullable(),
+    google_access_token: z.string().nullable(),
+    google_access_token_expires_at: z.string().nullable(),
+    display_name: z.string().nullable(),
+    picture_url: z.string().nullable(),
     notion_token: z.string().nullable(),
     created_at: z.string(),
   })

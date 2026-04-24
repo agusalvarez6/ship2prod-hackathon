@@ -10,6 +10,8 @@ export type {
 export { createTinyFishClient } from './tinyfish.js'
 
 export type {
+  ListCalendarEventsOptions,
+  NotionCalendarEvent,
   NotionClient,
   NotionClientConfig,
   NotionPage,

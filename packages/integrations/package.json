@@ -13,6 +13,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@notionhq/client": "^2.2.15",
     "@ship2prod/schema": "workspace:*"
   },
   "devDependencies": {
