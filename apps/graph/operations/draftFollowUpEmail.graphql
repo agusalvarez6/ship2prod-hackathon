@@ -1,5 +1,0 @@
-mutation draftFollowUpEmail($briefingId: ID!, $tone: String) {
-  draftFollowUpEmail(briefingId: $briefingId, tone: $tone) {
-    emailText
-  }
-}

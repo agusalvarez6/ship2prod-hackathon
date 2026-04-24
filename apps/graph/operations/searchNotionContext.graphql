@@ -1,7 +1,0 @@
-query searchNotionContext($userId: ID!, $query: String!) {
-  searchNotionContext(userId: $userId, query: $query) {
-    id
-    title
-    excerpt
-  }
-}
