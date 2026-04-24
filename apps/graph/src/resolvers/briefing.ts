@@ -95,6 +95,97 @@ export const briefingResolvers = {
     return result.rows.map(rowToBriefing)
   },
 
+  getBriefingByEvent: async (
+    _parent: unknown,
+    args: { userId: string; calendarEventId: string },
+    ctx: { db: Pool },
+  ): Promise<Record<string, unknown> | null> => {
+    const result = await ctx.db.query<BriefingRow>(
+      `SELECT b.id, b.user_id, b.meeting_id, b.contact_name, b.contact_email, b.contact_role,
+              b.company_name, b.company_domain, b.company_summary, b.status, b.summary_60s,
+              b.sections, b.sources_count, b.error_message, b.research_started_at,
+              b.research_finished_at, b.created_at, b.updated_at
+         FROM briefings b
+         INNER JOIN meetings m ON b.meeting_id = m.id
+        WHERE m.user_id = $1 AND m.calendar_event_id = $2
+        ORDER BY b.created_at DESC
+        LIMIT 1`,
+      [args.userId, args.calendarEventId],
+    )
+    const row = result.rows[0]
+    return row ? rowToBriefing(row) : null
+  },
+
+  ensureBriefingForEvent: async (
+    _parent: unknown,
+    args: {
+      input: {
+        userId: string
+        calendarEventId: string
+        title: string
+        startsAt: string
+        attendees: unknown
+        description?: string | null
+      }
+    },
+    ctx: { db: Pool; redis: Redis },
+  ): Promise<Record<string, unknown>> => {
+    const { userId, calendarEventId, title, startsAt, attendees, description } = args.input
+
+    const upsert = await ctx.db.query<{ id: string }>(
+      `INSERT INTO meetings (user_id, calendar_event_id, title, starts_at, attendees, description)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+       ON CONFLICT (user_id, calendar_event_id) DO UPDATE
+         SET title = EXCLUDED.title,
+             starts_at = EXCLUDED.starts_at,
+             attendees = EXCLUDED.attendees,
+             description = EXCLUDED.description
+       RETURNING id`,
+      [userId, calendarEventId, title, startsAt, JSON.stringify(attendees ?? []), description ?? null],
+    )
+    const meetingId = upsert.rows[0]?.id
+    if (!meetingId) throw new Error('meetings upsert returned no id')
+
+    const existing = await ctx.db.query<BriefingRow>(
+      `SELECT id, user_id, meeting_id, contact_name, contact_email, contact_role,
+              company_name, company_domain, company_summary, status, summary_60s,
+              sections, sources_count, error_message, research_started_at,
+              research_finished_at, created_at, updated_at
+         FROM briefings
+        WHERE meeting_id = $1 AND status <> 'failed'
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [meetingId],
+    )
+    const existingRow = existing.rows[0]
+    if (existingRow) return rowToBriefing(existingRow)
+
+    const briefingId = randomUUID()
+    const inserted = await ctx.db.query<BriefingRow>(
+      `INSERT INTO briefings (id, user_id, meeting_id, status, sections, sources_count, created_at, updated_at)
+       VALUES ($1, $2, $3, 'pending', '{}'::jsonb, 0, now(), now())
+       RETURNING id, user_id, meeting_id, contact_name, contact_email, contact_role,
+                 company_name, company_domain, company_summary, status, summary_60s,
+                 sections, sources_count, error_message, research_started_at,
+                 research_finished_at, created_at, updated_at`,
+      [briefingId, userId, meetingId],
+    )
+
+    const payload: ResearchJobPayload = {
+      jobId: randomUUID() as ResearchJobPayload['jobId'],
+      briefingId: briefingId as ResearchJobPayload['briefingId'],
+      userId: userId as ResearchJobPayload['userId'],
+      meetingId: meetingId as ResearchJobPayload['meetingId'],
+      notionPageIds: [],
+      requestedAt: Date.now(),
+    }
+    await ctx.redis.lpush(REDIS_KEYS.jobs.pending, JSON.stringify(payload))
+
+    const briefingRow = inserted.rows[0]
+    if (!briefingRow) throw new Error('insert returned no row')
+    return rowToBriefing(briefingRow)
+  },
+
   createBriefingFromMeeting: async (
     _parent: unknown,
     args: { meetingId: string },

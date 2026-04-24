@@ -4,20 +4,26 @@ import Link from "next/link";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 import { ensureAccessToken } from "@/lib/oauth";
 import { listUpcomingEvents, type UpcomingEvent } from "@/lib/calendar";
+import { getBriefingsByEvents, type BriefingSummary } from "@/lib/briefings";
 import { CreateEventForm } from "./CreateEventForm";
+import { DebriefAllButton } from "./DebriefAllButton";
 import { EventRow } from "./EventRow";
 
 export const dynamic = "force-dynamic";
 
 type LoadResult =
-  | { kind: "ok"; events: UpcomingEvent[] }
+  | { kind: "ok"; events: UpcomingEvent[]; briefings: Map<string, BriefingSummary> }
   | { kind: "error"; message: string };
 
 async function loadEvents(userId: string): Promise<LoadResult> {
   try {
     const accessToken = await ensureAccessToken(userId);
     const events = await listUpcomingEvents(accessToken, 20);
-    return { kind: "ok", events };
+    const briefings = await getBriefingsByEvents(
+      userId,
+      events.map((e) => e.id),
+    );
+    return { kind: "ok", events, briefings };
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     return { kind: "error", message };
@@ -58,7 +64,12 @@ export default async function CalendarPage(): Promise<JSX.Element> {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-medium text-slate-900">Upcoming events</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-slate-900">Upcoming events</h2>
+          {result.kind === "ok" && result.events.length > 0 ? (
+            <DebriefAllButton events={result.events} windowHours={24} />
+          ) : null}
+        </div>
         {result.kind === "error" ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
             Could not load events: {result.message}
@@ -67,9 +78,16 @@ export default async function CalendarPage(): Promise<JSX.Element> {
           <p className="mt-4 text-sm text-slate-600">No upcoming events on your primary calendar.</p>
         ) : (
           <ul className="mt-4 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {result.events.map((event) => (
-              <EventRow key={event.id} event={event} />
-            ))}
+            {result.events.map((event) => {
+              const brief = result.briefings.get(event.id);
+              return (
+                <EventRow
+                  key={event.id}
+                  event={event}
+                  initialBriefing={brief ? { id: brief.id, status: brief.status } : null}
+                />
+              );
+            })}
           </ul>
         )}
       </section>

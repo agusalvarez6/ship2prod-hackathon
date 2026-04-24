@@ -23,10 +23,12 @@ const schema = createSchema<GraphContext>({
       searchNotionContext: meetingResolvers.searchNotionContext,
       getBriefingProgress: briefingResolvers.getBriefingProgress,
       getBriefing: briefingResolvers.getBriefing,
+      getBriefingByEvent: briefingResolvers.getBriefingByEvent,
       listBriefings: briefingResolvers.listBriefings,
     },
     Mutation: {
       createBriefingFromMeeting: briefingResolvers.createBriefingFromMeeting,
+      ensureBriefingForEvent: briefingResolvers.ensureBriefingForEvent,
       answerFromBriefing: voiceResolvers.answerFromBriefing,
       draftFollowUpEmail: briefingResolvers.draftFollowUpEmail,
       saveCallTranscript: voiceResolvers.saveCallTranscript,
