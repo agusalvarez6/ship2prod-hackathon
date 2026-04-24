@@ -1,0 +1,6 @@
+mutation draftFollowUpEmail($briefingId: ID!) {
+  draftFollowUpEmail(briefingId: $briefingId) {
+    subject
+    body
+  }
+}

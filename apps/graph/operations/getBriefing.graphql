@@ -1,0 +1,7 @@
+query getBriefing($id: ID!) {
+  getBriefing(id: $id) {
+    id
+    status
+    sections
+  }
+}

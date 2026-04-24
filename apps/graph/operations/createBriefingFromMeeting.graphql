@@ -1,0 +1,6 @@
+mutation createBriefingFromMeeting($meetingId: ID!) {
+  createBriefingFromMeeting(meetingId: $meetingId) {
+    id
+    status
+  }
+}

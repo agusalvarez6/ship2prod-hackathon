@@ -1,0 +1,8 @@
+query searchNotionContext($query: String!, $limit: Int) {
+  searchNotionContext(query: $query, limit: $limit) {
+    pageId
+    pageTitle
+    excerpt
+    url
+  }
+}

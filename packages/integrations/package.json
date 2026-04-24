@@ -13,10 +13,12 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@ship2prod/errors": "workspace:*",
     "@ship2prod/schema": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "msw": "^2",
     "vitest": "^1"
   }
 }

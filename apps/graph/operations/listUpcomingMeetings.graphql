@@ -1,0 +1,9 @@
+query listUpcomingMeetings($limit: Int) {
+  listUpcomingMeetings(limit: $limit) {
+    id
+    title
+    startsAt
+    attendees
+    description
+  }
+}
