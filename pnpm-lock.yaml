@@ -96,6 +96,13 @@ importers:
       '@ship2prod/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
 
   apps/web:
     dependencies:

@@ -53,7 +53,7 @@ const SAMPLE_SECTIONS = {
 
 const localServer = setupServer(
   http.post('https://api.tinyfish.io/v1/extract', async ({ request }) => {
-    const body = (await request.json()) as { url: string }
+    const body = (await request.clone().json()) as { url: string }
     return HttpResponse.json({
       url: body.url,
       text: `Acme is a widget company. See ${body.url} for details.`,
@@ -61,7 +61,7 @@ const localServer = setupServer(
     })
   }),
   http.post('https://api.tinyfish.io/v1/search', async ({ request }) => {
-    const body = (await request.json()) as { query: string }
+    const body = (await request.clone().json()) as { query: string }
     return HttpResponse.json({
       items: [
         {
@@ -71,16 +71,12 @@ const localServer = setupServer(
       ],
     })
   }),
-  http.post('https://api.anthropic.com/v1/messages', () =>
-    HttpResponse.json({
-      id: 'msg_test',
-      type: 'message',
-      role: 'assistant',
-      content: [{ type: 'text', text: JSON.stringify(SAMPLE_SECTIONS) }],
-      model: 'claude-stub',
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 0, output_tokens: 0 },
-    }),
+  http.post(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+    () =>
+      HttpResponse.json({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(SAMPLE_SECTIONS) }] } }],
+      }),
   ),
 )
 
@@ -102,10 +98,10 @@ describe('runPipeline integration', () => {
 
     await applySchema(pool)
 
-    await pool.query(
-      `INSERT INTO users (id, email) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`,
-      [userId, `test-${userId}@example.com`],
-    )
+    await pool.query(`INSERT INTO users (id, email) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`, [
+      userId,
+      `test-${userId}@example.com`,
+    ])
     await pool.query(
       `INSERT INTO meetings (id, user_id, calendar_event_id, title, starts_at)
        VALUES ($1, $2, $3, $4, now())
