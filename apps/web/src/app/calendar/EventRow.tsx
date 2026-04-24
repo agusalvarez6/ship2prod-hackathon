@@ -49,8 +49,8 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
     <li className="px-4 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-900">{event.title}</p>
-          <p className="text-xs text-slate-500">
+          <p className="truncate text-sm font-medium text-ink-900">{event.title}</p>
+          <p className="text-xs text-ink-500">
             {event.startsAt ? new Date(event.startsAt).toLocaleString() : "no start time"}
           </p>
         </div>
@@ -60,7 +60,7 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
               href={event.htmlLink}
               target="_blank"
               rel="noreferrer"
-              className="text-sm font-medium text-slate-700 hover:underline"
+              className="text-sm font-medium text-accent-700 transition-colors hover:text-accent-600"
             >
               Open in Google
             </a>
@@ -68,7 +68,7 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-md border border-ink-300 bg-paper px-3 py-1.5 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100"
             aria-expanded={expanded}
           >
             {expanded ? "Close" : "Edit description"}
@@ -77,10 +77,10 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
       </div>
 
       {expanded ? (
-        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-3 rounded-lg border border-ink-200 bg-ink-50 p-4">
           <form onSubmit={onSubmit} className="flex flex-col gap-3">
-            <label className="text-sm text-slate-700">
-              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <label className="text-sm text-ink-700">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-ink-500">
                 Event description
               </span>
               <textarea
@@ -88,14 +88,14 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={6}
                 placeholder="No description yet. Add talking points, context, links…"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-900 focus:outline-none"
+                className="mt-1 w-full rounded-md border border-ink-300 bg-paper px-3 py-2 text-sm text-ink-900 focus:border-accent-500 focus:outline-none"
               />
             </label>
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
                 disabled={submitting || !dirty}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:bg-slate-400"
+                className="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-paper shadow-sm transition-colors hover:bg-accent-700 disabled:bg-ink-300 disabled:text-ink-500 disabled:shadow-none"
               >
                 {submitting ? "Saving..." : "Save"}
               </button>
@@ -103,15 +103,15 @@ export function EventRow({ event }: { event: UpcomingEvent }): JSX.Element {
                 type="button"
                 onClick={onReset}
                 disabled={submitting || !dirty}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:text-slate-400"
+                className="rounded-md border border-ink-300 bg-paper px-3 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-ink-100 disabled:text-ink-400"
               >
                 Reset
               </button>
               {savedAt && !dirty ? (
-                <span className="text-xs text-emerald-700">Saved</span>
+                <span className="text-xs font-medium text-success-700">Saved</span>
               ) : null}
               {error ? (
-                <span className="text-xs text-red-700">Error: {error}</span>
+                <span className="text-xs text-danger-700">Error: {error}</span>
               ) : null}
             </div>
           </form>
