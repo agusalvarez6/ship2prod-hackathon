@@ -10,5 +10,8 @@ export function createPool(
     connectionString: url,
     max: 5,
     idleTimeoutMillis: 10_000,
+    ssl: !/^postgres(ql)?:\/\/[^/]*(localhost|127\.0\.0\.1)/.test(url)
+      ? { rejectUnauthorized: false }
+      : false,
   })
 }

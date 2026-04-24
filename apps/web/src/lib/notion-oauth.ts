@@ -1,12 +1,18 @@
 import crypto from "node:crypto";
+import { SignJWT, jwtVerify } from "jose";
 import { PermanentError, TransientError, UserInputError } from "./errors.js";
 import { getNotionEnv } from "./notion-env.js";
-import { getRedis } from "./redis.js";
+import { getEnv } from "./env.js";
 
 export const NOTION_AUTH_ENDPOINT = "https://api.notion.com/v1/oauth/authorize";
 export const NOTION_TOKEN_ENDPOINT = "https://api.notion.com/v1/oauth/token";
 
 const STATE_TTL_SECONDS = 600;
+const STATE_AUDIENCE = "oauth:state:notion";
+
+function stateSecret(): Uint8Array {
+  return new TextEncoder().encode(getEnv().SESSION_JWT_SECRET);
+}
 
 export interface NotionTokenResponse {
   access_token: string;
@@ -33,42 +39,37 @@ export type NotionOwner =
     }
   | { type: "workspace"; workspace: true };
 
-/** Redis key for a CSRF state nonce. Distinct namespace from the gcal flow. */
-export function notionStateKey(nonce: string): string {
-  return `oauth:notion:state:${nonce}`;
-}
-
 /**
- * Mints a 32-byte base64url nonce and stores it in Redis under a Notion-
- * specific namespace with a 10-minute TTL. Stores the owning user id in the
- * payload so the callback can correlate the grant back to a session even if
- * the user's session cookie was rotated in the interim.
+ * Mints an HS256-signed JWT carrying a 32-byte nonce, the owning user id,
+ * and a creation timestamp. The JWT itself is the OAuth `state` value, so
+ * no server-side store is needed.
  */
-export async function mintNotionState(
-  userId: string,
-  redis = getRedis(),
-): Promise<string> {
+export async function mintNotionState(userId: string): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000);
   const nonce = crypto.randomBytes(32).toString("base64url");
-  const payload = JSON.stringify({ userId, createdAt: Date.now() });
-  await redis.set(notionStateKey(nonce), payload, "EX", STATE_TTL_SECONDS);
-  return nonce;
+  return await new SignJWT({ nonce, userId, createdAt: Date.now() })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt(nowSec)
+    .setExpirationTime(nowSec + STATE_TTL_SECONDS)
+    .setAudience(STATE_AUDIENCE)
+    .sign(stateSecret());
 }
 
 /**
- * Atomically reads and deletes a state nonce. Returns the stored payload or
- * `null` if the nonce is unknown, expired, or already consumed.
+ * Verifies the state JWT signature, expiry, and audience. Returns the
+ * `{userId, createdAt}` payload, or `null` on tampering or expiry.
  */
 export async function consumeNotionState(
-  nonce: string,
-  redis = getRedis(),
+  state: string,
 ): Promise<{ userId: string; createdAt: number } | null> {
-  const raw = await redis.getdel(notionStateKey(nonce));
-  if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { userId?: unknown; createdAt?: unknown };
-    if (typeof parsed.userId !== "string") return null;
-    const createdAt = typeof parsed.createdAt === "number" ? parsed.createdAt : Date.now();
-    return { userId: parsed.userId, createdAt };
+    const { payload } = await jwtVerify(state, stateSecret(), {
+      audience: STATE_AUDIENCE,
+    });
+    if (typeof payload.userId !== "string") return null;
+    const createdAt =
+      typeof payload.createdAt === "number" ? payload.createdAt : Date.now();
+    return { userId: payload.userId, createdAt };
   } catch {
     return null;
   }

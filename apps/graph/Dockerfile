@@ -18,7 +18,7 @@ RUN pnpm --filter @ship2prod/graph build
 
 RUN cp apps/graph/src/schema.graphql apps/graph/dist/schema.graphql
 
-RUN pnpm --filter @ship2prod/graph --prod deploy /out
+RUN pnpm --filter @ship2prod/graph --prod deploy --legacy /out
 
 
 FROM cgr.dev/chainguard/node:latest AS runtime

@@ -6,7 +6,6 @@ const EnvSchema = z.object({
   GOOGLE_REDIRECT_URI: z.string().url(),
   SESSION_JWT_SECRET: z.string().min(32, "SESSION_JWT_SECRET must be at least 32 bytes"),
   DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1),
   APP_URL: z.string().url(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });

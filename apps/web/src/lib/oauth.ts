@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { classifyGoogleError, TransientError } from "./errors.js";
-import { getRedis } from "./redis.js";
+import { SignJWT, jwtVerify } from "jose";
+import { classifyGoogleError } from "./errors.js";
 import { getUserById, updateAccessToken, clearUserTokens } from "./users.js";
 import { getEnv } from "./env.js";
 
@@ -12,10 +12,12 @@ export const CALENDAR_RW_SCOPE = "https://www.googleapis.com/auth/calendar";
 export const OAUTH_SCOPES = ["openid", "email", "profile", CALENDAR_RW_SCOPE].join(" ");
 
 const STATE_TTL_SECONDS = 600;
-const REFRESH_LOCK_TTL_MS = 30_000;
 const ACCESS_TOKEN_SAFETY_MARGIN_MS = 60_000;
-const REFRESH_POLL_INTERVAL_MS = 200;
-const REFRESH_POLL_MAX_MS = 5_000;
+const STATE_AUDIENCE = "oauth:state:google";
+
+function stateSecret(): Uint8Array {
+  return new TextEncoder().encode(getEnv().SESSION_JWT_SECRET);
+}
 
 export interface GoogleTokenResponse {
   access_token: string;
@@ -36,43 +38,38 @@ export interface GoogleIdTokenClaims {
   family_name?: string;
 }
 
-/** State key shape used both during mint and during GETDEL on callback. */
-export function stateKey(nonce: string): string {
-  return `oauth:state:${nonce}`;
-}
-
-/** Refresh lock key. Uses a UUID as the fencing token, TTL 30 s. */
-export function refreshLockKey(userId: string): string {
-  return `lock:google:refresh:${userId}`;
-}
-
-/** Mints a 32-byte base64url nonce, stores a JSON blob in Redis with TTL. */
-export async function mintState(
-  redis = getRedis(),
-): Promise<string> {
+/**
+ * Mints an HS256-signed JWT carrying a 32-byte nonce and creation timestamp.
+ * The JWT is the OAuth `state` value; integrity + TTL come from the signature
+ * and `exp` claim, so no server-side store is needed.
+ */
+export async function mintState(): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000);
   const nonce = crypto.randomBytes(32).toString("base64url");
-  const payload = JSON.stringify({ createdAt: Date.now() });
-  await redis.set(stateKey(nonce), payload, "EX", STATE_TTL_SECONDS);
-  return nonce;
+  return await new SignJWT({ nonce, createdAt: Date.now() })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt(nowSec)
+    .setExpirationTime(nowSec + STATE_TTL_SECONDS)
+    .setAudience(STATE_AUDIENCE)
+    .sign(stateSecret());
 }
 
 /**
- * Atomically fetch and delete a stored state nonce. Returns `null` if the
- * nonce is unknown or already consumed. ioredis 5+ supports `GETDEL`
- * directly against Redis 7.
+ * Verifies the state JWT signature + expiry. Returns `{createdAt}` on
+ * success, `null` on tampering, expiry, or audience mismatch.
  */
 export async function consumeState(
-  nonce: string,
-  redis = getRedis(),
+  state: string,
 ): Promise<{ createdAt: number } | null> {
-  const raw = await redis.getdel(stateKey(nonce));
-  if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { createdAt?: number };
-    if (typeof parsed.createdAt !== "number") return { createdAt: Date.now() };
-    return { createdAt: parsed.createdAt };
+    const { payload } = await jwtVerify(state, stateSecret(), {
+      audience: STATE_AUDIENCE,
+    });
+    const createdAt =
+      typeof payload.createdAt === "number" ? payload.createdAt : Date.now();
+    return { createdAt };
   } catch {
-    return { createdAt: Date.now() };
+    return null;
   }
 }
 
@@ -165,53 +162,18 @@ export async function revokeToken(
 }
 
 /**
- * Refresh the access token for a user. Serialised via a Redis lock; losers
- * poll the users row and exit when they observe a fresh expiry.
- *
- * Returns the new access token on success. Throws a classified error when
- * Google rejects the refresh or the poll times out.
+ * Refresh the access token for a user. Concurrent callers may both fire the
+ * refresh; Google's refresh endpoint accepts repeated requests on the same
+ * refresh_token, and `updateAccessToken` is last-writer-wins. The previous
+ * Redis-based fencing was removed when web's runtime stopped having Redis
+ * access; if duplicate refreshes ever become a load problem, move this
+ * codepath behind a backend service.
  */
 export async function refreshAccessToken(
   userId: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
-  const env = getEnv();
-  const redis = getRedis();
-  const lockKey = refreshLockKey(userId);
-  const fenceToken = crypto.randomUUID();
-
-  const acquired = await redis.set(lockKey, fenceToken, "PX", REFRESH_LOCK_TTL_MS, "NX");
-  if (acquired === "OK") {
-    try {
-      const token = await doRefresh(userId, env, fetchImpl);
-      return token;
-    } finally {
-      // Only delete if we still own the lock.
-      const current = await redis.get(lockKey);
-      if (current === fenceToken) {
-        await redis.del(lockKey);
-      }
-    }
-  }
-
-  // Loser branch: poll the users row until the winner has written a fresh expiry.
-  const start = Date.now();
-  while (Date.now() - start < REFRESH_POLL_MAX_MS) {
-    await new Promise((r) => setTimeout(r, REFRESH_POLL_INTERVAL_MS));
-    const user = await getUserById(userId);
-    if (!user) throw new Error("user disappeared during refresh poll");
-    if (isAccessTokenFresh(user.google_access_token, user.google_access_token_expires_at)) {
-      return user.google_access_token!;
-    }
-  }
-
-  // Timeout: one retry outside the lock.
-  try {
-    return await doRefresh(userId, env, fetchImpl);
-  } catch (err) {
-    if (err instanceof TransientError) throw err;
-    throw new TransientError("refresh lock contention timed out", 503);
-  }
+  return await doRefresh(userId, getEnv(), fetchImpl);
 }
 
 function isAccessTokenFresh(token: string | null, expiresAtIso: string | null): boolean {

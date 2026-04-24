@@ -6,7 +6,13 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
   if (pool) return pool;
   const env = getEnv();
-  pool = new Pool({ connectionString: env.DATABASE_URL, max: 10 });
+  pool = new Pool({
+    connectionString: env.DATABASE_URL,
+    max: 10,
+    ssl: /^postgres(ql)?:\/\/[^/]*(localhost|127\.0\.0\.1)/.test(env.DATABASE_URL)
+      ? false
+      : { rejectUnauthorized: false },
+  });
   return pool;
 }
 
