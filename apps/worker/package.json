@@ -1,0 +1,16 @@
+{
+  "name": "@ship2prod/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@ship2prod/schema": "workspace:*",
+    "@ship2prod/errors": "workspace:*",
+    "@ship2prod/integrations": "workspace:*"
+  }
+}

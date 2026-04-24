@@ -45,6 +45,48 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.39)
 
+  apps/graph:
+    dependencies:
+      '@ship2prod/errors':
+        specifier: workspace:*
+        version: link:../../packages/errors
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+
+  apps/vapi-webhook:
+    dependencies:
+      '@ship2prod/errors':
+        specifier: workspace:*
+        version: link:../../packages/errors
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      '@ship2prod/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+
+  apps/web:
+    dependencies:
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      '@ship2prod/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+
+  apps/worker:
+    dependencies:
+      '@ship2prod/errors':
+        specifier: workspace:*
+        version: link:../../packages/errors
+      '@ship2prod/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+
   infra/seed:
     dependencies:
       '@ship2prod/schema':
@@ -66,11 +108,23 @@ importers:
 
   packages/errors: {}
 
+  packages/integrations:
+    dependencies:
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../schema
+
   packages/schema:
     dependencies:
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+
+  packages/sdk:
+    dependencies:
+      '@ship2prod/schema':
+        specifier: workspace:*
+        version: link:../schema
 
 packages:
 
