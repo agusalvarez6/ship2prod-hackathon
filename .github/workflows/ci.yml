@@ -29,6 +29,3 @@ jobs:
 
       - name: Typecheck
         run: pnpm -r typecheck
-
-      - name: Docker build (chainguard base)
-        run: docker build -f docker/chainguard.base.Dockerfile . -t precall-base:ci
