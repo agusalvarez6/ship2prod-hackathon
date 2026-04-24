@@ -3,7 +3,7 @@ export type AppError =
   | { kind: 'not_found'; entity: string; id: string }
   | {
       kind: 'upstream'
-      service: 'vapi' | 'tinyfish' | 'insforge' | 'wundergraph'
+      service: 'vapi' | 'tinyfish' | 'insforge' | 'wundergraph' | 'notion' | 'gcal' | 'openai'
       status: number
       retryAfterMs?: number
     }
