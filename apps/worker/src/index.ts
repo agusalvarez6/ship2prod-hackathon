@@ -21,6 +21,7 @@ async function main(): Promise<void> {
     inflight++
     try {
       const job = ResearchJobPayloadSchema.parse(JSON.parse(raw))
+      // eslint-disable-next-line no-console
       console.log(`worker: received job ${job.jobId} for briefing ${job.briefingId}`)
       await runPipeline(job)
     } finally {
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
 }
 
 function shutdown(signal: string): void {
+  // eslint-disable-next-line no-console
   console.log(`worker: ${signal} received, draining ${inflight} inflight`)
   shuttingDown = true
   const check = setInterval(() => {
