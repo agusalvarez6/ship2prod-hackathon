@@ -69,8 +69,14 @@ function renderSources(sources: NormalizedSource[]): string {
 }
 
 function stripJsonFence(text: string): string {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  return fenced ? (fenced[1] ?? text).trim() : text.trim()
+  const trimmed = text.trim()
+  // Paired ```json ... ``` fence.
+  const paired = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i)
+  if (paired?.[1]) return paired[1].trim()
+  // Leading ```json with no closing fence (truncated response).
+  const leading = trimmed.match(/^```(?:json)?\s*([\s\S]*)$/i)
+  if (leading?.[1]) return leading[1].replace(/```\s*$/, '').trim()
+  return trimmed
 }
 
 export async function synthesize(
@@ -86,6 +92,7 @@ export async function synthesize(
     system: 'You produce meeting briefings as strict JSON. Respond with the JSON object only.',
     context,
     question: 'Produce the briefing JSON now.',
+    json: true,
   })
 
   let parsed: BriefingSections

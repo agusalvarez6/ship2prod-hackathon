@@ -4,6 +4,11 @@ export interface SynthesizerInput {
   system: string
   context: string
   question: string
+  /**
+   * When true, tells Gemini to emit application/json directly (no markdown fences).
+   * Callers that expect a JSON object should set this.
+   */
+  json?: boolean
 }
 
 export interface LLMClient {
@@ -16,8 +21,8 @@ export interface LLMClientConfig {
 }
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_MODEL = 'gemini-2.0-flash'
-const MAX_OUTPUT_TOKENS = 2048
+const DEFAULT_MODEL = 'gemini-2.5-flash'
+const MAX_OUTPUT_TOKENS = 8192
 
 interface GeminiContentResponse {
   candidates?: Array<{
@@ -46,6 +51,7 @@ export function createLLMClient(config: LLMClientConfig): LLMClient {
         generationConfig: {
           maxOutputTokens: MAX_OUTPUT_TOKENS,
           temperature: 0,
+          ...(input.json ? { responseMimeType: 'application/json' } : {}),
         },
       }
 
