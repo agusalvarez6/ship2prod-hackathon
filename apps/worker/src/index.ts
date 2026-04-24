@@ -25,11 +25,27 @@ async function main(): Promise<void> {
     )
     if (!raw) continue
     inflight++
+    let briefingId: string | undefined
     try {
       const job = ResearchJobPayloadSchema.parse(JSON.parse(raw))
+      briefingId = job.briefingId
       // eslint-disable-next-line no-console
       console.log(`worker: received job ${job.jobId} for briefing ${job.briefingId}`)
       await runPipeline(job, { tinyfish, llm, pool, redis, emitProgress })
+    } catch (pipelineErr) {
+      const msg = pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr)
+      console.error(`worker: pipeline failed: ${msg}`)
+      if (briefingId) {
+        try {
+          await pool.query(
+            `UPDATE briefings SET status = 'failed', updated_at = now() WHERE id = $1`,
+            [briefingId],
+          )
+        } catch (updateErr) {
+          console.error('worker: also failed to mark briefing failed:', updateErr)
+        }
+      }
+      // Do not rethrow. Pull the next job.
     } finally {
       inflight--
     }
