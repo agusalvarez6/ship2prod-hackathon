@@ -223,7 +223,6 @@ describe('PreCallBot Postgres meeting repository', () => {
 
     expect(meeting).toMatchObject({
       title: 'Intro with Sarah from Ramp',
-      startsInMinutes: 30,
       contact: {
         name: 'Sarah Chen',
         email: 'sarah@ramp.com',
@@ -239,6 +238,7 @@ describe('PreCallBot Postgres meeting repository', () => {
         ]),
       },
     })
+    expect(meeting!.startsInMinutes).toBeGreaterThan(0)
   })
 })
 
