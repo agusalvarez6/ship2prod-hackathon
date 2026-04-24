@@ -15,12 +15,14 @@ export interface LLMClientConfig {
   model?: string
 }
 
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
-const DEFAULT_MODEL = 'claude-sonnet-4-6'
-const MAX_TOKENS = 2048
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+const DEFAULT_MODEL = 'gemini-2.0-flash'
+const MAX_OUTPUT_TOKENS = 2048
 
-interface AnthropicMessageResponse {
-  content: Array<{ type: string; text?: string }>
+interface GeminiContentResponse {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> }
+  }>
 }
 
 export function createLLMClient(config: LLMClientConfig): LLMClient {
@@ -28,26 +30,29 @@ export function createLLMClient(config: LLMClientConfig): LLMClient {
 
   return {
     async synthesize(input: SynthesizerInput): Promise<string> {
+      const url = `${GEMINI_BASE_URL}/${model}:generateContent?key=${encodeURIComponent(config.apiKey)}`
       const body = {
-        model,
-        max_tokens: MAX_TOKENS,
-        system: input.system,
-        messages: [
+        systemInstruction: { parts: [{ text: input.system }] },
+        contents: [
           {
             role: 'user',
-            content: `Context:\n${input.context}\n\nQuestion: ${input.question}`,
+            parts: [
+              {
+                text: `Context:\n${input.context}\n\nQuestion: ${input.question}`,
+              },
+            ],
           },
         ],
+        generationConfig: {
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          temperature: 0,
+        },
       }
 
-      const result = await withRetry<AnthropicMessageResponse>(async () => {
-        const response = await globalThis.fetch(ANTHROPIC_URL, {
+      const result = await withRetry<GeminiContentResponse>(async () => {
+        const response = await globalThis.fetch(url, {
           method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            'x-api-key': config.apiKey,
-            'anthropic-version': '2023-06-01',
-          },
+          headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body),
         })
         if (!response.ok) {
@@ -62,7 +67,7 @@ export function createLLMClient(config: LLMClientConfig): LLMClient {
               : {}),
           })
         }
-        const data = (await response.json()) as AnthropicMessageResponse
+        const data = (await response.json()) as GeminiContentResponse
         return ok(data)
       })
 
@@ -73,11 +78,11 @@ export function createLLMClient(config: LLMClientConfig): LLMClient {
         throw new Error(`llm ${result.error.kind}`)
       }
 
-      const first = result.value.content.find((c) => c.type === 'text')
-      if (!first?.text) {
+      const text = result.value.candidates?.[0]?.content?.parts?.[0]?.text
+      if (!text) {
         throw new Error('llm empty response')
       }
-      return first.text
+      return text
     },
   }
 }
