@@ -23,6 +23,8 @@ Dispatched 2026-04-24 T+0. Disjoint file ownership across five tracks.
 | W0-D test harness | swe-04 | `c4581b9` | vitest + globalSetup + MSW + docker-compose.test.yml; 87/88 tests (1 docker-gated) |
 | W0-E SQL + seeds + Docker + compose | swe-05 | `b7239c1` | infra/seed/* (InsForge schema + fixture briefing UUID 11111111-2222-3333-4444-555555555555), docker/* (Chainguard base), docker-compose.yml |
 
+**Wave 0 sealed 2026-04-24 by engineering-manager-01.** All five tracks landed; Wave 1 dispatch cleared.
+
 ### Wave 1 — pending
 
 `packages/integrations`, subgraph skeleton + operations + Cosmo router config, vapi-webhook skeleton, worker skeleton, Next.js scaffold.
