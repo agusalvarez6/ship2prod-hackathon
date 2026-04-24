@@ -1,0 +1,14 @@
+{
+  "name": "@ship2prod/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@ship2prod/schema": "workspace:*",
+    "@ship2prod/sdk": "workspace:*"
+  }
+}
