@@ -239,6 +239,20 @@ describe('PreCallBot Vapi config', () => {
     })
   })
 
+  it('can point the function tool directly at a hosted endpoint', () => {
+    const config = buildGetNextMeetingToolConfig({
+      toolUrl: 'https://z5bpjses.functions.insforge.app/precall-next-meeting',
+      internalApiKey: 'secret',
+    })
+
+    expect(config).toMatchObject({
+      server: {
+        url: 'https://z5bpjses.functions.insforge.app/precall-next-meeting',
+        headers: { Authorization: 'Bearer secret' },
+      },
+    })
+  })
+
   it('attaches the system prompt and tool id to the assistant config', () => {
     const config = buildPreCallBotAssistantConfig({ toolId: 'tool_123' })
 
@@ -277,7 +291,13 @@ async function tryConnect(url: string): Promise<pg.Client | null> {
 }
 
 async function applySeedSql(client: pg.Client): Promise<void> {
-  await client.query(await readFile(MIGRATION_PATH, 'utf8'))
+  // pgcrypto is global to the database, so skip it here to avoid racing the
+  // infra seed suite when Vitest runs files in parallel.
+  const migrationSql = (await readFile(MIGRATION_PATH, 'utf8')).replace(
+    /^\s*CREATE EXTENSION IF NOT EXISTS pgcrypto;\s*$/im,
+    '',
+  )
+  await client.query(migrationSql)
   const seedFiles = (await readdir(SEED_DIR)).filter((file) => file.endsWith('.sql')).sort()
 
   for (const file of seedFiles) {

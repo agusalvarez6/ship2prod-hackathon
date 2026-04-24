@@ -1,7 +1,8 @@
 import { PRECALLBOT_FIRST_MESSAGE, PRECALLBOT_NAME, PRECALLBOT_SYSTEM_PROMPT } from './prompt.js'
 
 export interface ToolConfigOptions {
-  publicBaseUrl: string
+  publicBaseUrl?: string | null
+  toolUrl?: string | null
   internalApiKey: string | null
 }
 
@@ -13,10 +14,7 @@ type JsonObject = Record<string, unknown>
 
 export function buildGetNextMeetingToolConfig(options: ToolConfigOptions): JsonObject {
   const server: JsonObject = {
-    url: new URL(
-      '/vapi/tools/get-next-meeting',
-      normalizeBaseUrl(options.publicBaseUrl),
-    ).toString(),
+    url: resolveToolUrl(options),
   }
 
   if (options.internalApiKey) {
@@ -103,4 +101,12 @@ export function normalizeBaseUrl(value: string): string {
     url.pathname = '/'
   }
   return url.toString()
+}
+
+function resolveToolUrl(options: ToolConfigOptions): string {
+  if (options.toolUrl) return new URL(options.toolUrl).toString()
+  if (!options.publicBaseUrl) {
+    throw new Error('PRECALL_TOOL_URL or PRECALL_PUBLIC_BASE_URL is required')
+  }
+  return new URL('/vapi/tools/get-next-meeting', normalizeBaseUrl(options.publicBaseUrl)).toString()
 }

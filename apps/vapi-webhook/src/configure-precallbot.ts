@@ -12,15 +12,22 @@ interface VapiObject {
 
 async function main(): Promise<void> {
   const privateKey = requiredEnv('VAPI_PRIVATE_KEY')
-  const publicBaseUrl = resolvePublicBaseUrl()
+  const toolUrl = process.env.PRECALL_TOOL_URL ?? null
+  const publicBaseUrl = toolUrl ? null : resolvePublicBaseUrl()
   const internalApiKey = requiredEnv('PRECALL_INTERNAL_API_KEY')
+  const toolConfig = buildGetNextMeetingToolConfig({ publicBaseUrl, toolUrl, internalApiKey })
+  const existingToolId = process.env.VAPI_PRECALLBOT_TOOL_ID
 
   const toolId =
-    process.env.VAPI_PRECALLBOT_TOOL_ID ??
+    existingToolId ??
     (await createVapiResource(privateKey, '/tool', {
-      body: buildGetNextMeetingToolConfig({ publicBaseUrl, internalApiKey }),
+      body: toolConfig,
       label: 'getNextMeeting tool',
     }))
+
+  if (existingToolId) {
+    await updateVapiResource(privateKey, `/tool/${existingToolId}`, toToolUpdateConfig(toolConfig))
+  }
 
   const assistantConfig = buildPreCallBotAssistantConfig({ toolId })
   const assistantId = process.env.VAPI_ASSISTANT_ID
@@ -101,6 +108,11 @@ function requiredEnv(name: string): string {
   const value = process.env[name]
   if (!value) throw new Error(`${name} is required`)
   return value
+}
+
+function toToolUpdateConfig(toolConfig: Record<string, unknown>): Record<string, unknown> {
+  const { type: _type, ...updateConfig } = toolConfig
+  return updateConfig
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
