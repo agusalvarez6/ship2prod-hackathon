@@ -25,9 +25,23 @@ Dispatched 2026-04-24 T+0. Disjoint file ownership across five tracks.
 
 **Wave 0 sealed 2026-04-24 by engineering-manager-01.** All five tracks landed; Wave 1 dispatch cleared.
 
-### Wave 1 — pending
+### Wave 1
 
-`packages/integrations`, subgraph skeleton + operations + Cosmo router config, vapi-webhook skeleton, worker skeleton, Next.js scaffold.
+Dispatched 2026-04-24 in two micro-waves: 1.0 (F+G) landed first, 1.1 (H/I/J/K) in flight.
+
+#### Wave 1.0 — completed
+
+| Track | Owner | Commit | Notes |
+|-------|-------|--------|-------|
+| W1-F `@ship2prod/integrations` | swe-02-w1 | `2200071` | 4 client interfaces (LLM / TinyFish / Notion / GCal) + not-implemented factories; 12 tests |
+| W1-G `@ship2prod/sdk` | swe-03-w1 | `1697d24` | PrecallClient with 9 methods; MSW happy-path test |
+
+#### Wave 1.1 — in flight
+
+- W1-H `apps/graph` subgraph + Cosmo router (swe-04-w1)
+- W1-I `apps/vapi-webhook` skeleton (swe-05-w1)
+- W1-J `apps/worker` skeleton (swe-06)
+- W1-K `apps/web` Next.js scaffold (swe-07)
 
 ### Wave 2 — pending
 
