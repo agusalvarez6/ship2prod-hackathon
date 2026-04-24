@@ -77,15 +77,25 @@ importers:
 
   apps/worker:
     dependencies:
-      '@ship2prod/errors':
-        specifier: workspace:*
-        version: link:../../packages/errors
       '@ship2prod/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
       '@ship2prod/schema':
         specifier: workspace:*
         version: link:../../packages/schema
+      ioredis:
+        specifier: ^5
+        version: 5.10.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.39
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^1
+        version: 1.6.1(@types/node@20.19.39)
 
   infra/seed:
     dependencies:
