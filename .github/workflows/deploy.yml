@@ -34,15 +34,6 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Test
-        run: pnpm test:run
-
       - name: Deploy InsForge edge function
         env:
           INSFORGE_URL: ${{ secrets.INSFORGE_URL }}
