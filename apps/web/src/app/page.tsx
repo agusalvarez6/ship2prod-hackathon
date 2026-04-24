@@ -39,7 +39,7 @@ export default async function LandingPage({
             Walk into every meeting prepared.
           </h1>
           <p className="mt-6 max-w-prose text-base leading-relaxed text-ink-700">
-            Voice-first meeting prep. PreCall pulls the public record on your contact, drafts a
+            Voice-first meeting prep. PreCallBot pulls the public record on your contact, drafts a
             briefing, and answers your questions on the call.
           </p>
           <ul className="mt-8 grid gap-3 text-sm text-ink-700">
@@ -66,7 +66,7 @@ export default async function LandingPage({
             Connect your calendar to start.
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-ink-600">
-            We read your primary Google Calendar so PreCall can show your next meetings. You can
+            We read your primary Google Calendar so PreCallBot can show your next meetings. You can
             disconnect anytime.
           </p>
 

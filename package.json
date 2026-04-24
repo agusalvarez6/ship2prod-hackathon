@@ -2,7 +2,7 @@
   "name": "s2p-hackathon",
   "version": "0.0.0",
   "private": true,
-  "description": "PreCall. Voice-first meeting-prep agent (Ship to Prod 2026-04-24).",
+  "description": "PreCallBot. Voice-first meeting-prep agent (Ship to Prod 2026-04-24).",
   "type": "module",
   "engines": {
     "node": ">=20.10 <21",

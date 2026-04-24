@@ -151,7 +151,7 @@ export default async function DashboardPage({
       <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ConnectionCard
           title="Google Calendar"
-          description="PreCall reads your primary calendar so it can surface upcoming meetings and pre-brief each one."
+          description="PreCallBot reads your primary calendar so it can surface upcoming meetings and pre-brief each one."
           connected={Boolean(user.google_access_token)}
           primary={
             <Link
@@ -177,7 +177,7 @@ export default async function DashboardPage({
 
         <ConnectionCard
           title="Notion workspace"
-          description="PreCall reads pages and calendar databases you share with it. You pick exactly which pages on Notion's consent screen."
+          description="PreCallBot reads pages and calendar databases you share with it. You pick exactly which pages on Notion's consent screen."
           connected={notionConnected}
           primary={
             notionConnected ? null : (

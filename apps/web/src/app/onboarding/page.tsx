@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 const PHONE_ERROR_COPY: Record<string, string> = {
   invalid: 'Enter a valid US phone number or E.164 number.',
-  taken: 'That phone number is already connected to another PreCall account.',
+  taken: 'That phone number is already connected to another PreCallBot account.',
   db: 'Could not save your phone number. Try again in a moment.',
 }
 
@@ -38,13 +38,13 @@ export default async function OnboardingPage({
       <section className="grid w-full items-center gap-8 lg:grid-cols-[1fr_420px]">
         <div className="max-w-2xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-accent-700">
-            PreCall voice access
+            PreCallBot voice access
           </p>
           <h1 className="mt-4 text-5xl font-semibold leading-[1.04] tracking-tight text-ink-950 sm:text-6xl">
             Connect the number you will call from.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-ink-700">
-            PreCall uses caller ID to find your calendar, briefings, and next meeting when you dial
+            PreCallBot uses caller ID to find your calendar, briefings, and next meeting when you dial
             the Vapi agent.
           </p>
           <p className="mt-4 max-w-xl text-sm leading-6 text-ink-500">

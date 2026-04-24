@@ -3,7 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata = {
-  title: "PreCall",
+  title: "PreCallBot",
   description: "Voice-first meeting-prep agent.",
 };
 
@@ -17,13 +17,16 @@ export default function RootLayout({ children }: { children: ReactNode }): JSX.E
               href="/"
               className="flex items-center gap-2.5 text-paper transition-opacity hover:opacity-80"
             >
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 rounded-full bg-accent-500 shadow-[0_0_0_3px_oklch(0.520_0.095_265_/_0.18)]"
+              <img
+                src="/brand/logo-white.png"
+                alt=""
+                className="h-8 w-8 rounded-md object-cover"
               />
-              <span className="text-[13px] font-semibold uppercase tracking-[0.22em]">PreCall</span>
+              <span className="text-[13px] font-semibold uppercase tracking-[0.22em]">
+                PreCallBot
+              </span>
             </Link>
-            <span className="text-[11px] uppercase tracking-[0.2em] text-ink-400">
+            <span className="hidden text-[11px] uppercase tracking-[0.2em] text-ink-400 sm:inline">
               Meeting prep, before the call
             </span>
           </div>

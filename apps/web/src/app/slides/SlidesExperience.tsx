@@ -15,7 +15,7 @@ const slides = [
   {
     eyebrow: '01 / Problem',
     title: 'Meeting prep is scattered right before the call.',
-    body: 'PreCall turns calendar invites, Notion context, public research, and voice follow-ups into one tactical briefing.',
+    body: 'PreCallBot turns calendar invites, Notion context, public research, and voice follow-ups into one tactical briefing.',
     bullets: [
       'No more last-minute tab hunting.',
       'Private notes and public context stay tied to the meeting.',
@@ -26,7 +26,7 @@ const slides = [
   {
     eyebrow: '02 / Product',
     title: 'A focused agent pipeline for every upcoming meeting.',
-    body: 'The user picks a meeting. PreCall reads the workspace context, researches the company, stores the briefing, and exposes it through the web app and voice.',
+    body: 'The user picks a meeting. PreCallBot reads the workspace context, researches the company, stores the briefing, and exposes it through the web app and voice.',
     bullets: [
       'Google Calendar finds the next meeting.',
       'Notion and TinyFish provide private and public context.',
@@ -36,7 +36,7 @@ const slides = [
   },
   {
     eyebrow: '03 / Demo',
-    title: 'Open PreCall, brief a meeting, then ask by voice.',
+    title: 'Open PreCallBot, brief a meeting, then ask by voice.',
     body: 'The hackathon demo shows a real user flow: connect sources, choose a meeting, generate a briefing, and ask for the best opening question.',
     bullets: [
       'The app keeps the workflow simple enough to understand live.',
@@ -60,7 +60,7 @@ function ProblemVisual(): JSX.Element {
         </div>
       ))}
       <div className="rounded-lg border border-accent-200 bg-accent-50 px-4 py-4 text-accent-900">
-        <p className="text-xs font-semibold uppercase">PreCall</p>
+        <p className="text-xs font-semibold uppercase">PreCallBot</p>
         <p className="mt-1 text-lg font-semibold">One meeting-ready brief</p>
       </div>
     </div>

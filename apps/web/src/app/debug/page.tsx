@@ -102,7 +102,7 @@ export default function DebugPage(): JSX.Element {
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-3xl">
         <header className="mb-8">
-          <h1 className="text-3xl font-semibold tracking-tight">PreCall debug</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">PreCallBot debug</h1>
           <p className="mt-2 text-sm text-gray-500">
             No-auth harness to trigger a briefing for the Sarah fixture meeting and watch it run.
           </p>
