@@ -1,8 +1,9 @@
-import { DEMO_USER_ID, createMockNextMeetingRepository } from './precallbot/nextMeeting.js'
+import { DEMO_USER_ID, createPostgresNextMeetingRepository } from './precallbot/nextMeeting.js'
 import { createAppServer } from './server.js'
 
 const port = Number.parseInt(process.env.PORT ?? '8787', 10)
-const repository = createMockNextMeetingRepository()
+const databaseUrl = process.env.DATABASE_URL
+const repository = databaseUrl ? createPostgresNextMeetingRepository({ databaseUrl }) : null
 
 const server = createAppServer({
   repository,
@@ -18,6 +19,7 @@ const shutdown = async () => {
   await new Promise<void>((resolve) => {
     server.close(() => resolve())
   })
+  await repository?.close?.()
 }
 
 process.on('SIGINT', () => {

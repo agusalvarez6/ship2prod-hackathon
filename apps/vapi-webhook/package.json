@@ -13,6 +13,10 @@
   "dependencies": {
     "@ship2prod/errors": "workspace:*",
     "@ship2prod/schema": "workspace:*",
-    "@ship2prod/sdk": "workspace:*"
+    "@ship2prod/sdk": "workspace:*",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0"
   }
 }

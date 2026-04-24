@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { readFile, readdir } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import pg from 'pg'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { handleRequest, extractVapiToolCalls } from '../src/server.js'
 import {
   DEMO_USER_ID,
-  createMockNextMeetingRepository,
+  createPostgresNextMeetingRepository,
   type NextMeeting,
   type NextMeetingRepository,
 } from '../src/precallbot/nextMeeting.js'
@@ -13,6 +18,13 @@ import {
 } from '../src/precallbot/vapiConfig.js'
 
 const NOW = new Date('2026-04-24T21:00:00.000Z')
+const POSTGRES_TEST_URL =
+  process.env.POSTGRES_TEST_URL ?? 'postgres://postgres:postgres@localhost:5433/postgres'
+const HERE = dirname(fileURLToPath(import.meta.url))
+const REPO_ROOT = join(HERE, '..', '..', '..')
+const MIGRATION_PATH = join(REPO_ROOT, 'infra/seed/migrations/001_init.sql')
+const SEED_DIR = join(REPO_ROOT, 'infra/seed/seed')
+const schemaName = `vapi_webhook_test_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
 
 const SAMPLE_MEETING: NextMeeting = {
   id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
@@ -89,26 +101,6 @@ describe('PreCallBot meeting endpoint', () => {
     })
   })
 
-  it('loads the demo meeting from mock JSON', async () => {
-    const repository = createMockNextMeetingRepository()
-    const meeting = await repository.findNextMeeting({
-      userId: DEMO_USER_ID,
-      email: null,
-      now: NOW,
-    })
-
-    expect(meeting).toMatchObject({
-      title: 'Intro with Sarah from Ramp',
-      startsInMinutes: 30,
-      briefing: {
-        status: 'ready',
-        questionsToAsk: expect.arrayContaining([
-          "How does Ramp's QuickBooks sync handle class and location tags on card transactions?",
-        ]),
-      },
-    })
-  })
-
   it('responds to Vapi tool-call envelopes', async () => {
     const response = await handleRequest(
       new Request('http://local/vapi/tools/get-next-meeting', {
@@ -170,6 +162,66 @@ describe('PreCallBot meeting endpoint', () => {
   })
 })
 
+describe('PreCallBot Postgres meeting repository', () => {
+  let client: pg.Client | null = null
+  let repository: NextMeetingRepository | null = null
+  let dbAvailable = false
+
+  beforeAll(async () => {
+    client = await tryConnect(POSTGRES_TEST_URL)
+    if (!client) return
+
+    dbAvailable = true
+    await client.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`)
+    await client.query(`SET search_path TO "${schemaName}"`)
+    await applySeedSql(client)
+    repository = createPostgresNextMeetingRepository({
+      databaseUrl: POSTGRES_TEST_URL,
+      schema: schemaName,
+    })
+  })
+
+  afterAll(async () => {
+    await repository?.close?.()
+    if (client) {
+      try {
+        await client.query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`)
+      } finally {
+        await client.end()
+      }
+    }
+  })
+
+  it('loads the demo meeting from the seeded database', async () => {
+    if (!dbAvailable) return
+
+    const meeting = await repository!.findNextMeeting({
+      userId: DEMO_USER_ID,
+      email: null,
+      now: NOW,
+    })
+
+    expect(meeting).toMatchObject({
+      title: 'Intro with Sarah from Ramp',
+      startsInMinutes: 30,
+      contact: {
+        name: 'Sarah Chen',
+        email: 'sarah@ramp.com',
+      },
+      company: {
+        name: 'Ramp',
+        domain: 'ramp.com',
+      },
+      briefing: {
+        status: 'ready',
+        questionsToAsk: expect.arrayContaining([
+          "How does Ramp's QuickBooks sync handle class and location tags on card transactions?",
+        ]),
+      },
+    })
+  })
+})
+
 describe('PreCallBot Vapi config', () => {
   it('points the function tool at the local Vapi tool endpoint', () => {
     const config = buildGetNextMeetingToolConfig({
@@ -211,5 +263,24 @@ function fakeRepository(meeting: NextMeeting | null): NextMeetingRepository {
     async findNextMeeting() {
       return meeting
     },
+  }
+}
+
+async function tryConnect(url: string): Promise<pg.Client | null> {
+  const client = new pg.Client({ connectionString: url })
+  try {
+    await client.connect()
+    return client
+  } catch {
+    return null
+  }
+}
+
+async function applySeedSql(client: pg.Client): Promise<void> {
+  await client.query(await readFile(MIGRATION_PATH, 'utf8'))
+  const seedFiles = (await readdir(SEED_DIR)).filter((file) => file.endsWith('.sql')).sort()
+
+  for (const file of seedFiles) {
+    await client.query(await readFile(join(SEED_DIR, file), 'utf8'))
   }
 }
