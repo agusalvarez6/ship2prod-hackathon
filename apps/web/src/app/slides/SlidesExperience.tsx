@@ -176,7 +176,7 @@ export function SlidesExperience(): JSX.Element {
             href="/"
             className="rounded-md border border-ink-300 bg-paper px-3 py-2 text-sm font-medium text-ink-700 shadow-sm transition-colors hover:bg-ink-50"
           >
-            Landing
+            Skip slides
           </a>
         </div>
 

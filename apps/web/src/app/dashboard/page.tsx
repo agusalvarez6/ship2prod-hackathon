@@ -158,7 +158,7 @@ export default async function DashboardPage({
               href="/calendar"
               className="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-paper shadow-sm transition-colors hover:bg-accent-700"
             >
-              View calendar
+              View upcoming events
             </Link>
           }
           disconnect={
