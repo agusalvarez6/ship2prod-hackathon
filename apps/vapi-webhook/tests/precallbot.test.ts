@@ -160,6 +160,26 @@ describe('PreCallBot meeting endpoint', () => {
       }),
     ).toEqual([{ id: 'abc', name: 'getNextMeeting', parameters: { email: 'demo@precall.app' } }])
   })
+
+  it('extracts OpenAI-style Vapi tool calls with JSON-string arguments', () => {
+    expect(
+      extractVapiToolCalls({
+        message: {
+          type: 'tool-calls',
+          toolCallList: [
+            {
+              id: 'call_123',
+              type: 'function',
+              function: {
+                name: 'getNextMeeting',
+                arguments: JSON.stringify({ userId: DEMO_USER_ID }),
+              },
+            },
+          ],
+        },
+      }),
+    ).toEqual([{ id: 'call_123', name: 'getNextMeeting', parameters: { userId: DEMO_USER_ID } }])
+  })
 })
 
 describe('PreCallBot Postgres meeting repository', () => {
@@ -258,13 +278,15 @@ describe('PreCallBot Vapi config', () => {
 
     expect(config).toMatchObject({
       name: 'PreCallBot',
+      firstMessage: '',
+      firstMessageMode: 'assistant-speaks-first-with-model-generated-message',
       model: {
         provider: 'openai',
         toolIds: ['tool_123'],
         messages: [
           {
             role: 'system',
-            content: expect.stringContaining('You are PreCallBot'),
+            content: expect.stringContaining('On the first assistant turn, call getNextMeeting'),
           },
         ],
       },

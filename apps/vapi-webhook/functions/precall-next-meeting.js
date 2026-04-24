@@ -222,16 +222,21 @@ function extractVapiToolCalls(value) {
 
   if (directCalls.length > 0) {
     return directCalls.flatMap((item) => {
-      if (!isRecord(item) || typeof item.id !== 'string' || typeof item.name !== 'string') return []
+      if (!isRecord(item)) return []
+      const functionCall = isRecord(item.function) ? item.function : {}
+      const id = item.id
+      const name = item.name || functionCall.name
+      if (typeof id !== 'string' || typeof name !== 'string') return []
       return [
         {
-          id: item.id,
-          name: item.name,
-          parameters: isRecord(item.arguments)
-            ? item.arguments
-            : isRecord(item.parameters)
-              ? item.parameters
-              : {},
+          id,
+          name,
+          parameters:
+            parseParameters(item.arguments) ||
+            parseParameters(item.parameters) ||
+            parseParameters(functionCall.arguments) ||
+            parseParameters(functionCall.parameters) ||
+            {},
         },
       ]
     })
@@ -251,14 +256,26 @@ function extractVapiToolCalls(value) {
       {
         id,
         name,
-        parameters: isRecord(item.toolCall.parameters)
-          ? item.toolCall.parameters
-          : isRecord(functionCall.parameters)
-            ? functionCall.parameters
-            : {},
+        parameters:
+          parseParameters(item.toolCall.parameters) ||
+          parseParameters(functionCall.arguments) ||
+          parseParameters(functionCall.parameters) ||
+          {},
       },
     ]
   })
+}
+
+function parseParameters(value) {
+  if (isRecord(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return null
+
+  try {
+    const parsed = JSON.parse(value)
+    return isRecord(parsed) ? parsed : null
+  } catch {
+    return null
+  }
 }
 
 async function isAuthorized(request) {

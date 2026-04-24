@@ -164,10 +164,16 @@ export function extractVapiToolCalls(value: unknown): VapiToolCall[] {
   if (directCalls.length > 0) {
     return directCalls.flatMap((item) => {
       if (!isRecord(item)) return []
+      const functionCall = getRecord(item, 'function')
       const id = getString(item, 'id')
-      const name = getString(item, 'name')
+      const name = getString(item, 'name') ?? getString(functionCall ?? {}, 'name')
       if (!id || !name) return []
-      const parameters = getRecord(item, 'arguments') ?? getRecord(item, 'parameters') ?? {}
+      const parameters =
+        getParameters(item, 'arguments') ??
+        getRecord(item, 'parameters') ??
+        getParameters(functionCall ?? {}, 'arguments') ??
+        getRecord(functionCall ?? {}, 'parameters') ??
+        {}
       return [{ id, name, parameters }]
     })
   }
@@ -187,7 +193,10 @@ export function extractVapiToolCalls(value: unknown): VapiToolCall[] {
     if (!id || !name) return []
 
     const parameters =
-      getRecord(toolCall, 'parameters') ?? getRecord(functionCall ?? {}, 'parameters') ?? {}
+      getRecord(toolCall, 'parameters') ??
+      getParameters(functionCall ?? {}, 'arguments') ??
+      getRecord(functionCall ?? {}, 'parameters') ??
+      {}
 
     return [{ id, name, parameters }]
   })
@@ -306,6 +315,22 @@ function getString(record: Record<string, unknown>, key: string): string | undef
 function getRecord(record: Record<string, unknown>, key: string): Record<string, unknown> | null {
   const value = record[key]
   return isRecord(value) ? value : null
+}
+
+function getParameters(
+  record: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> | null {
+  const value = record[key]
+  if (isRecord(value)) return value
+  if (typeof value !== 'string' || !value.trim()) return null
+
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return isRecord(parsed) ? parsed : null
+  } catch {
+    return null
+  }
 }
 
 function buildLookupInput(userId: string | null | undefined, email: string | null | undefined) {

@@ -64,7 +64,7 @@ export function buildPreCallBotAssistantConfig(options: AssistantConfigOptions):
   return {
     name: PRECALLBOT_NAME,
     firstMessage: PRECALLBOT_FIRST_MESSAGE,
-    firstMessageMode: 'assistant-speaks-first',
+    firstMessageMode: 'assistant-speaks-first-with-model-generated-message',
     model: {
       provider: 'openai',
       model: 'gpt-4o',
