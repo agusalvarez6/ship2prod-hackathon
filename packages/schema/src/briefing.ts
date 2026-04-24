@@ -1,26 +1,26 @@
-import { z } from "zod";
-import { BriefingIdSchema, MeetingIdSchema, UserIdSchema } from "./ids.js";
-import { CitedSourceSchema } from "./source.js";
+import { z } from 'zod'
+import { BriefingIdSchema, MeetingIdSchema, UserIdSchema } from './ids.js'
+import { CitedSourceSchema } from './source.js'
 
 export const BriefingStatusSchema = z.enum([
-  "pending",
-  "researching",
-  "drafting",
-  "ready",
-  "failed",
-]);
-export type BriefingStatus = z.infer<typeof BriefingStatusSchema>;
+  'pending',
+  'researching',
+  'drafting',
+  'ready',
+  'failed',
+])
+export type BriefingStatus = z.infer<typeof BriefingStatusSchema>
 
 export const BriefingSectionKeySchema = z.enum([
-  "summary",
-  "questions",
-  "opening_line",
-  "pain_points",
-  "notion_context",
-  "follow_up_email",
-  "risks",
-]);
-export type BriefingSectionKey = z.infer<typeof BriefingSectionKeySchema>;
+  'summary',
+  'questions',
+  'opening_line',
+  'pain_points',
+  'notion_context',
+  'follow_up_email',
+  'risks',
+])
+export type BriefingSectionKey = z.infer<typeof BriefingSectionKeySchema>
 
 export const BriefingSectionsSchema = z
   .object({
@@ -52,15 +52,14 @@ export const BriefingSectionsSchema = z
       .strict(),
     bestConversationAngle: z.string(),
     suggestedOpeningLine: z.string(),
-    questionsToAsk: z
-      .tuple([z.string(), z.string(), z.string(), z.string(), z.string()]),
+    questionsToAsk: z.tuple([z.string(), z.string(), z.string(), z.string(), z.string()]),
     likelyPainPoints: z.array(z.string()),
     risks: z.array(z.string()),
     followUpEmail: z.string(),
     citedSources: z.array(CitedSourceSchema),
   })
-  .strict();
-export type BriefingSections = z.infer<typeof BriefingSectionsSchema>;
+  .strict()
+export type BriefingSections = z.infer<typeof BriefingSectionsSchema>
 
 export const ResearchErrorSchema = z
   .object({
@@ -68,8 +67,8 @@ export const ResearchErrorSchema = z
     message: z.string(),
     at: z.string().datetime({ offset: true }),
   })
-  .strict();
-export type ResearchError = z.infer<typeof ResearchErrorSchema>;
+  .strict()
+export type ResearchError = z.infer<typeof ResearchErrorSchema>
 
 export const BriefingSchema = z
   .object({
@@ -97,8 +96,8 @@ export const BriefingSchema = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
   })
-  .strict();
-export type Briefing = z.infer<typeof BriefingSchema>;
+  .strict()
+export type Briefing = z.infer<typeof BriefingSchema>
 
 export const BriefingListItemSchema = z
   .object({
@@ -108,5 +107,5 @@ export const BriefingListItemSchema = z
     status: BriefingStatusSchema,
     createdAt: z.string().datetime({ offset: true }),
   })
-  .strict();
-export type BriefingListItem = z.infer<typeof BriefingListItemSchema>;
+  .strict()
+export type BriefingListItem = z.infer<typeof BriefingListItemSchema>

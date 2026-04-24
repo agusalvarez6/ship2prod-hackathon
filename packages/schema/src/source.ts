@@ -1,28 +1,21 @@
-import { z } from "zod";
-import { BriefingIdSchema, SourceIdSchema } from "./ids.js";
+import { z } from 'zod'
+import { BriefingIdSchema, SourceIdSchema } from './ids.js'
 
 export const SourceKindSchema = z.enum([
-  "notion_page",
-  "company_site",
-  "product_page",
-  "pricing_page",
-  "blog_post",
-  "news",
-  "linkedin",
-  "filing",
-  "other",
-]);
-export type SourceKind = z.infer<typeof SourceKindSchema>;
+  'notion_page',
+  'company_site',
+  'product_page',
+  'pricing_page',
+  'blog_post',
+  'news',
+  'linkedin',
+  'filing',
+  'other',
+])
+export type SourceKind = z.infer<typeof SourceKindSchema>
 
-export const SourceStatusSchema = z.enum([
-  "ok",
-  "blocked",
-  "captcha",
-  "timeout",
-  "dead",
-  "skipped",
-]);
-export type SourceStatus = z.infer<typeof SourceStatusSchema>;
+export const SourceStatusSchema = z.enum(['ok', 'blocked', 'captcha', 'timeout', 'dead', 'skipped'])
+export type SourceStatus = z.infer<typeof SourceStatusSchema>
 
 export const SourceSchema = z
   .object({
@@ -38,8 +31,8 @@ export const SourceSchema = z
     status: SourceStatusSchema,
     fetchedAt: z.string().datetime({ offset: true }),
   })
-  .strict();
-export type Source = z.infer<typeof SourceSchema>;
+  .strict()
+export type Source = z.infer<typeof SourceSchema>
 
 export const CitedSourceSchema = z
   .object({
@@ -48,5 +41,5 @@ export const CitedSourceSchema = z
     url: z.string().url().optional(),
     kind: SourceKindSchema,
   })
-  .strict();
-export type CitedSource = z.infer<typeof CitedSourceSchema>;
+  .strict()
+export type CitedSource = z.infer<typeof CitedSourceSchema>

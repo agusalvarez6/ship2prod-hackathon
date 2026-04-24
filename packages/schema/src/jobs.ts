@@ -1,11 +1,11 @@
-import { z } from "zod";
+import { z } from 'zod'
 import {
   BriefingIdSchema,
   JobIdSchema,
   MeetingIdSchema,
   NotionPageIdSchema,
   UserIdSchema,
-} from "./ids.js";
+} from './ids.js'
 
 export const ResearchJobPayloadSchema = z
   .object({
@@ -16,19 +16,19 @@ export const ResearchJobPayloadSchema = z
     notionPageIds: z.array(NotionPageIdSchema),
     requestedAt: z.number().int().nonnegative(),
   })
-  .strict();
-export type ResearchJobPayload = z.infer<typeof ResearchJobPayloadSchema>;
+  .strict()
+export type ResearchJobPayload = z.infer<typeof ResearchJobPayloadSchema>
 
 export const ProgressStepSchema = z.enum([
-  "queued",
-  "searching_notion",
-  "researching_company",
-  "reading_pages",
-  "synthesizing",
-  "ready",
-  "failed",
-]);
-export type ProgressStep = z.infer<typeof ProgressStepSchema>;
+  'queued',
+  'searching_notion',
+  'researching_company',
+  'reading_pages',
+  'synthesizing',
+  'ready',
+  'failed',
+])
+export type ProgressStep = z.infer<typeof ProgressStepSchema>
 
 export const ProgressEventSchema = z
   .object({
@@ -37,8 +37,8 @@ export const ProgressEventSchema = z
     detail: z.string().optional(),
     at: z.number().int().nonnegative(),
   })
-  .strict();
-export type ProgressEvent = z.infer<typeof ProgressEventSchema>;
+  .strict()
+export type ProgressEvent = z.infer<typeof ProgressEventSchema>
 
 export const ProgressSnapshotSchema = z
   .object({
@@ -46,5 +46,5 @@ export const ProgressSnapshotSchema = z
     current: ProgressEventSchema,
     history: z.array(ProgressEventSchema),
   })
-  .strict();
-export type ProgressSnapshot = z.infer<typeof ProgressSnapshotSchema>;
+  .strict()
+export type ProgressSnapshot = z.infer<typeof ProgressSnapshotSchema>
