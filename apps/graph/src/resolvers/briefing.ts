@@ -127,12 +127,21 @@ export const briefingResolvers = {
         startsAt: string
         attendees: unknown
         description?: string | null
+        force?: boolean | null
       }
     },
     ctx: { db: Pool; redis: Redis },
   ): Promise<Record<string, unknown>> => {
-    const { userId, userEmail, calendarEventId, title, startsAt, attendees, description } =
-      args.input
+    const {
+      userId,
+      userEmail,
+      calendarEventId,
+      title,
+      startsAt,
+      attendees,
+      description,
+      force,
+    } = args.input
     const hints = extractMeetingHints({ title, description, attendees, userEmail })
 
     const upsert = await ctx.db.query<{ id: string }>(
@@ -149,19 +158,21 @@ export const briefingResolvers = {
     const meetingId = upsert.rows[0]?.id
     if (!meetingId) throw new Error('meetings upsert returned no id')
 
-    const existing = await ctx.db.query<BriefingRow>(
-      `SELECT id, user_id, meeting_id, contact_name, contact_email, contact_role,
-              company_name, company_domain, company_summary, status, summary_60s,
-              sections, sources_count, error_message, research_started_at,
-              research_finished_at, created_at, updated_at
-         FROM briefings
-        WHERE meeting_id = $1 AND status <> 'failed'
-        ORDER BY created_at DESC
-        LIMIT 1`,
-      [meetingId],
-    )
-    const existingRow = existing.rows[0]
-    if (existingRow) return rowToBriefing(existingRow)
+    if (!force) {
+      const existing = await ctx.db.query<BriefingRow>(
+        `SELECT id, user_id, meeting_id, contact_name, contact_email, contact_role,
+                company_name, company_domain, company_summary, status, summary_60s,
+                sections, sources_count, error_message, research_started_at,
+                research_finished_at, created_at, updated_at
+           FROM briefings
+          WHERE meeting_id = $1 AND status <> 'failed'
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [meetingId],
+      )
+      const existingRow = existing.rows[0]
+      if (existingRow) return rowToBriefing(existingRow)
+    }
 
     const briefingId = randomUUID()
     const inserted = await ctx.db.query<BriefingRow>(
@@ -191,6 +202,84 @@ export const briefingResolvers = {
       briefingId: briefingId as ResearchJobPayload['briefingId'],
       userId: userId as ResearchJobPayload['userId'],
       meetingId: meetingId as ResearchJobPayload['meetingId'],
+      notionPageIds: [],
+      requestedAt: Date.now(),
+    }
+    await ctx.redis.lpush(REDIS_KEYS.jobs.pending, JSON.stringify(payload))
+
+    const briefingRow = inserted.rows[0]
+    if (!briefingRow) throw new Error('insert returned no row')
+    return rowToBriefing(briefingRow)
+  },
+
+  rerunBriefing: async (
+    _parent: unknown,
+    args: { briefingId: string },
+    ctx: { db: Pool; redis: Redis },
+  ): Promise<Record<string, unknown>> => {
+    const source = await ctx.db.query<{
+      user_id: string
+      meeting_id: string | null
+      user_email: string | null
+      meeting_title: string | null
+      meeting_starts_at: Date | null
+      meeting_attendees: unknown
+      meeting_description: string | null
+    }>(
+      `SELECT b.user_id,
+              b.meeting_id,
+              u.email AS user_email,
+              m.title AS meeting_title,
+              m.starts_at AS meeting_starts_at,
+              m.attendees AS meeting_attendees,
+              m.description AS meeting_description
+         FROM briefings b
+         LEFT JOIN users u ON u.id = b.user_id
+         LEFT JOIN meetings m ON m.id = b.meeting_id
+        WHERE b.id = $1`,
+      [args.briefingId],
+    )
+    const row = source.rows[0]
+    if (!row) throw new Error('briefing not found')
+    if (!row.meeting_id || !row.meeting_title || !row.meeting_starts_at) {
+      throw new Error('cannot rerun: briefing has no meeting row attached')
+    }
+
+    const hints = extractMeetingHints({
+      title: row.meeting_title,
+      description: row.meeting_description,
+      attendees: row.meeting_attendees,
+      userEmail: row.user_email,
+    })
+
+    const briefingId = randomUUID()
+    const inserted = await ctx.db.query<BriefingRow>(
+      `INSERT INTO briefings (
+         id, user_id, meeting_id, status,
+         contact_name, contact_email, company_name, company_domain,
+         sections, sources_count, created_at, updated_at
+       )
+       VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, '{}'::jsonb, 0, now(), now())
+       RETURNING id, user_id, meeting_id, contact_name, contact_email, contact_role,
+                 company_name, company_domain, company_summary, status, summary_60s,
+                 sections, sources_count, error_message, research_started_at,
+                 research_finished_at, created_at, updated_at`,
+      [
+        briefingId,
+        row.user_id,
+        row.meeting_id,
+        hints.contactName,
+        hints.contactEmail,
+        hints.companyName,
+        hints.companyDomain,
+      ],
+    )
+
+    const payload: ResearchJobPayload = {
+      jobId: randomUUID() as ResearchJobPayload['jobId'],
+      briefingId: briefingId as ResearchJobPayload['briefingId'],
+      userId: row.user_id as ResearchJobPayload['userId'],
+      meetingId: row.meeting_id as ResearchJobPayload['meetingId'],
       notionPageIds: [],
       requestedAt: Date.now(),
     }

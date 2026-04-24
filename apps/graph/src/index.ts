@@ -29,6 +29,7 @@ const schema = createSchema<GraphContext>({
     Mutation: {
       createBriefingFromMeeting: briefingResolvers.createBriefingFromMeeting,
       ensureBriefingForEvent: briefingResolvers.ensureBriefingForEvent,
+      rerunBriefing: briefingResolvers.rerunBriefing,
       answerFromBriefing: voiceResolvers.answerFromBriefing,
       draftFollowUpEmail: briefingResolvers.draftFollowUpEmail,
       saveCallTranscript: voiceResolvers.saveCallTranscript,

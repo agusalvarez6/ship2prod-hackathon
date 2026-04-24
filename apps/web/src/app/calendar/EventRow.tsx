@@ -63,7 +63,7 @@ export function EventRow({
     setSavedAt(null);
   }
 
-  async function onDebrief(): Promise<void> {
+  async function onDebrief(force = false): Promise<void> {
     if (debriefing) return;
     setDebriefing(true);
     setDebriefError(null);
@@ -77,6 +77,7 @@ export function EventRow({
           startsAt: event.startsAt,
           attendees: event.attendees,
           description: event.description,
+          force,
         }),
       });
       if (!res.ok) {
@@ -141,7 +142,8 @@ export function EventRow({
           <DebriefControl
             briefing={briefing}
             debriefing={debriefing}
-            onDebrief={() => void onDebrief()}
+            onDebrief={() => void onDebrief(false)}
+            onRerun={() => void onDebrief(true)}
           />
           {event.htmlLink ? (
             <a
@@ -232,19 +234,32 @@ function DebriefControl({
   briefing,
   debriefing,
   onDebrief,
+  onRerun,
 }: {
   briefing: InitialBriefing | null;
   debriefing: boolean;
   onDebrief: () => void;
+  onRerun: () => void;
 }): JSX.Element {
   if (briefing?.status === "ready") {
     return (
-      <Link
-        href={`/briefings/${briefing.id}`}
-        className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-      >
-        Open briefing
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link
+          href={`/briefings/${briefing.id}`}
+          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+        >
+          Open briefing
+        </Link>
+        <button
+          type="button"
+          onClick={onRerun}
+          disabled={debriefing}
+          title="Throw out the current briefing and research again from scratch."
+          className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
+        >
+          {debriefing ? "Re-running…" : "Re-run"}
+        </button>
+      </div>
     );
   }
   if (briefing && ACTIVE_STATUSES.includes(briefing.status)) {

@@ -44,6 +44,7 @@ interface EnsureBriefingInput {
   startsAt: string;
   attendees: Array<{ email: string; displayName?: string }>;
   description: string | null;
+  force?: boolean;
 }
 
 async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
@@ -95,7 +96,11 @@ export async function getBriefingsByEvents(
   return new Map(entries.filter((e): e is readonly [string, BriefingSummary] => e !== null));
 }
 
-/** Idempotent: creates a meeting row and briefing if missing, else returns current. */
+/**
+ * Creates a meeting row and briefing if missing, else returns the current one.
+ * Pass `force: true` to always create a fresh briefing even when one already
+ * exists (used for Re-run from the UI).
+ */
 export async function ensureBriefingForEvent(
   input: EnsureBriefingInput,
 ): Promise<BriefingSummary> {

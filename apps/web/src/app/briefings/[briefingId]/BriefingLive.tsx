@@ -2,13 +2,37 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { BriefingDetail, BriefingStatus } from "@/lib/briefings";
 
 const ACTIVE_STATUSES: readonly BriefingStatus[] = ["pending", "researching", "drafting"];
 
 export function BriefingLive({ initial }: { initial: BriefingDetail }): JSX.Element {
+  const router = useRouter();
   const [briefing, setBriefing] = useState<BriefingDetail>(initial);
   const [elapsed, setElapsed] = useState(0);
+  const [rerunning, setRerunning] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+
+  async function onRerun(): Promise<void> {
+    if (rerunning) return;
+    setRerunning(true);
+    setRerunError(null);
+    try {
+      const res = await fetch(`/api/briefings/${briefing.id}/rerun`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setRerunError(body?.error ?? `request failed (${res.status})`);
+        return;
+      }
+      const data = (await res.json()) as { id: string };
+      router.push(`/briefings/${data.id}`);
+    } catch (err) {
+      setRerunError(err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setRerunning(false);
+    }
+  }
 
   useEffect(() => {
     if (!ACTIVE_STATUSES.includes(briefing.status)) return;
@@ -56,8 +80,24 @@ export function BriefingLive({ initial }: { initial: BriefingDetail }): JSX.Elem
         <Link href="/calendar" className="text-sm text-slate-600 hover:underline">
           ← Calendar
         </Link>
-        <StatusStrip status={briefing.status} elapsed={elapsed} error={briefing.errorMessage} />
+        <div className="flex items-center gap-3">
+          <StatusStrip status={briefing.status} elapsed={elapsed} error={briefing.errorMessage} />
+          {briefing.status === "ready" || briefing.status === "failed" ? (
+            <button
+              type="button"
+              onClick={() => void onRerun()}
+              disabled={rerunning}
+              title="Throw out this briefing and research again from scratch."
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              {rerunning ? "Re-running…" : "Re-run"}
+            </button>
+          ) : null}
+        </div>
       </header>
+      {rerunError ? (
+        <p className="mb-4 text-xs text-red-700">Re-run failed: {rerunError}</p>
+      ) : null}
 
       <h1 className="text-3xl font-semibold text-slate-900">
         {briefing.contactName ?? briefing.companyName ?? "Briefing"}

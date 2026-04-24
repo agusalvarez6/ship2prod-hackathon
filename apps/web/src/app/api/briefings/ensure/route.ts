@@ -9,6 +9,7 @@ interface EnsureRequest {
   startsAt: string;
   attendees?: Array<{ email: string; displayName?: string }>;
   description?: string | null;
+  force?: boolean;
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -30,6 +31,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     startsAt: body.startsAt,
     attendees: body.attendees ?? [],
     description: body.description ?? null,
+    force: body.force === true,
   });
 
   return NextResponse.json(briefing, { status: 200 });
