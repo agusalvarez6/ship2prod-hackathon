@@ -16,7 +16,7 @@ export interface LLMClientConfig {
 }
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_MODEL = 'gemini-2.0-flash'
+const DEFAULT_MODEL = 'gemini-2.5-flash'
 const MAX_OUTPUT_TOKENS = 2048
 
 interface GeminiContentResponse {
