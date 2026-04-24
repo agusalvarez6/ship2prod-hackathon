@@ -12,7 +12,8 @@
     "./source": "./src/source.ts",
     "./jobs": "./src/jobs.ts",
     "./redis": "./src/redis.ts",
-    "./insforge": "./src/insforge.ts"
+    "./insforge": "./src/insforge.ts",
+    "./phone": "./src/phone.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

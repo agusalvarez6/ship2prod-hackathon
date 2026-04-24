@@ -5,11 +5,12 @@ import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { handleRequest, extractVapiToolCalls } from '../src/server.js'
+import { handleRequest, extractVapiCallerNumber, extractVapiToolCalls } from '../src/server.js'
 import {
   DEMO_USER_ID,
   createPostgresNextMeetingRepository,
   type NextMeeting,
+  type NextMeetingLookup,
   type NextMeetingRepository,
 } from '../src/precallbot/nextMeeting.js'
 import {
@@ -22,7 +23,7 @@ const POSTGRES_TEST_URL =
   process.env.POSTGRES_TEST_URL ?? 'postgres://postgres:postgres@localhost:5433/postgres'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(HERE, '..', '..', '..')
-const MIGRATION_PATH = join(REPO_ROOT, 'infra/seed/migrations/001_init.sql')
+const MIGRATIONS_DIR = join(REPO_ROOT, 'infra/seed/migrations')
 const SEED_DIR = join(REPO_ROOT, 'infra/seed/seed')
 const schemaName = `vapi_webhook_test_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
 
@@ -102,6 +103,7 @@ describe('PreCallBot meeting endpoint', () => {
   })
 
   it('responds to Vapi tool-call envelopes', async () => {
+    let seenLookup: NextMeetingLookup | null = null
     const response = await handleRequest(
       new Request('http://local/vapi/tools/get-next-meeting', {
         method: 'POST',
@@ -112,24 +114,37 @@ describe('PreCallBot meeting endpoint', () => {
         body: JSON.stringify({
           message: {
             type: 'tool-calls',
+            call: {
+              customer: { number: '(415) 555-2671' },
+            },
             toolCallList: [
               {
                 id: 'tool-call-1',
                 name: 'getNextMeeting',
-                arguments: { userId: DEMO_USER_ID },
+                arguments: { userId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
               },
             ],
           },
         }),
       }),
       {
-        repository: fakeRepository(SAMPLE_MEETING),
+        repository: {
+          async findNextMeeting(lookup) {
+            seenLookup = lookup
+            return SAMPLE_MEETING
+          },
+        },
         internalApiKey: 'secret',
         now: () => NOW,
       },
     )
 
     expect(response.status).toBe(200)
+    expect(seenLookup).toMatchObject({
+      userId: null,
+      phoneNumberE164: '+14155552671',
+      email: null,
+    })
     await expect(response.json()).resolves.toMatchObject({
       results: [
         {
@@ -180,6 +195,18 @@ describe('PreCallBot meeting endpoint', () => {
       }),
     ).toEqual([{ id: 'call_123', name: 'getNextMeeting', parameters: { userId: DEMO_USER_ID } }])
   })
+
+  it('extracts caller numbers from Vapi call payloads', () => {
+    expect(
+      extractVapiCallerNumber({
+        message: {
+          call: {
+            customer: { number: '+1 415 555 2671' },
+          },
+        },
+      }),
+    ).toBe('+1 415 555 2671')
+  })
 })
 
 describe('PreCallBot Postgres meeting repository', () => {
@@ -217,6 +244,7 @@ describe('PreCallBot Postgres meeting repository', () => {
 
     const meeting = await repository!.findNextMeeting({
       userId: DEMO_USER_ID,
+      phoneNumberE164: null,
       email: null,
       now: NOW,
     })
@@ -239,6 +267,22 @@ describe('PreCallBot Postgres meeting repository', () => {
       },
     })
     expect(meeting!.startsInMinutes).toBeGreaterThan(0)
+  })
+
+  it('loads the demo meeting by caller phone number', async () => {
+    if (!dbAvailable) return
+
+    const meeting = await repository!.findNextMeeting({
+      userId: null,
+      phoneNumberE164: '+14155552671',
+      email: null,
+      now: NOW,
+    })
+
+    expect(meeting).toMatchObject({
+      title: 'Intro with Sarah from Ramp',
+      contact: { name: 'Sarah Chen' },
+    })
   })
 })
 
@@ -315,11 +359,16 @@ async function tryConnect(url: string): Promise<pg.Client | null> {
 async function applySeedSql(client: pg.Client): Promise<void> {
   // pgcrypto is global to the database, so skip it here to avoid racing the
   // infra seed suite when Vitest runs files in parallel.
-  const migrationSql = (await readFile(MIGRATION_PATH, 'utf8')).replace(
-    /^\s*CREATE EXTENSION IF NOT EXISTS pgcrypto;\s*$/im,
-    '',
-  )
-  await client.query(migrationSql)
+  const migrationFiles = (await readdir(MIGRATIONS_DIR))
+    .filter((file) => file.endsWith('.sql'))
+    .sort()
+  for (const file of migrationFiles) {
+    const migrationSql = (await readFile(join(MIGRATIONS_DIR, file), 'utf8')).replace(
+      /^\s*CREATE EXTENSION IF NOT EXISTS pgcrypto;\s*$/im,
+      '',
+    )
+    await client.query(migrationSql)
+  }
   const seedFiles = (await readdir(SEED_DIR)).filter((file) => file.endsWith('.sql')).sort()
 
   for (const file of seedFiles) {

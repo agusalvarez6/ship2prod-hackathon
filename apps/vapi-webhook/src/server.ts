@@ -84,7 +84,11 @@ export async function handleRequest(request: Request, options: AppOptions): Prom
 
 async function handleNextMeetingGet(url: URL, options: AppOptions): Promise<Response> {
   return loadNextMeeting(
-    buildLookupInput(url.searchParams.get('userId'), url.searchParams.get('email')),
+    buildLookupInput(
+      url.searchParams.get('userId'),
+      url.searchParams.get('email'),
+      url.searchParams.get('phoneNumber'),
+    ),
     options,
   )
 }
@@ -94,7 +98,11 @@ async function handleNextMeetingPost(request: Request, options: AppOptions): Pro
   if (!body.ok) return jsonResponse({ error: body.error, message: body.message }, body.status)
 
   return loadNextMeeting(
-    buildLookupInput(getString(body.value, 'userId'), getString(body.value, 'email')),
+    buildLookupInput(
+      getString(body.value, 'userId'),
+      getString(body.value, 'email'),
+      getString(body.value, 'phoneNumber'),
+    ),
     options,
   )
 }
@@ -102,6 +110,7 @@ async function handleNextMeetingPost(request: Request, options: AppOptions): Pro
 async function loadNextMeeting(
   input: NextMeetingLookupInput,
   options: AppOptions,
+  loadOptions: { allowDefaultUser?: boolean } = {},
 ): Promise<Response> {
   if (!options.repository) {
     return jsonResponse(
@@ -114,7 +123,8 @@ async function loadNextMeeting(
   }
 
   const parsed = parseNextMeetingLookup(input, {
-    defaultUserId: options.defaultUserId ?? DEMO_USER_ID,
+    defaultUserId:
+      loadOptions.allowDefaultUser === false ? null : (options.defaultUserId ?? DEMO_USER_ID),
     now: options.now?.() ?? new Date(),
   })
 
@@ -137,13 +147,14 @@ async function handleVapiGetNextMeetingTool(
   if (!body.ok) return jsonResponse({ results: [] }, 200)
 
   const calls = extractVapiToolCalls(body.value).filter((call) => call.name === 'getNextMeeting')
+  const callerPhoneNumber = extractVapiCallerNumber(body.value)
 
   const results = await Promise.all(
     calls.map(async (call) => {
-      const response = await loadNextMeeting(
-        buildLookupInput(getString(call.parameters, 'userId'), getString(call.parameters, 'email')),
-        options,
-      )
+      const input = callerPhoneNumber
+        ? buildLookupInput(null, null, callerPhoneNumber)
+        : buildLookupInput(undefined, undefined, undefined)
+      const response = await loadNextMeeting(input, options, { allowDefaultUser: false })
 
       return {
         toolCallId: call.id,
@@ -153,6 +164,22 @@ async function handleVapiGetNextMeetingTool(
   )
 
   return jsonResponse({ results })
+}
+
+export function extractVapiCallerNumber(value: unknown): string | null {
+  if (!isRecord(value)) return null
+  const message = isRecord(value.message) ? value.message : value
+
+  const candidates = [
+    getNestedString(message, ['call', 'customer', 'number']),
+    getNestedString(value, ['call', 'customer', 'number']),
+    getNestedString(message, ['customer', 'number']),
+    getNestedString(value, ['customer', 'number']),
+    getNestedString(message, ['call', 'phoneCallProviderDetails', 'from']),
+    getNestedString(value, ['call', 'phoneCallProviderDetails', 'from']),
+  ]
+
+  return candidates.find((candidate) => candidate && candidate.trim()) ?? null
 }
 
 export function extractVapiToolCalls(value: unknown): VapiToolCall[] {
@@ -333,10 +360,24 @@ function getParameters(
   }
 }
 
-function buildLookupInput(userId: string | null | undefined, email: string | null | undefined) {
+function getNestedString(record: Record<string, unknown>, path: string[]): string | null {
+  let current: unknown = record
+  for (const key of path) {
+    if (!isRecord(current)) return null
+    current = current[key]
+  }
+  return typeof current === 'string' ? current : null
+}
+
+function buildLookupInput(
+  userId: string | null | undefined,
+  email: string | null | undefined,
+  phoneNumber: string | null | undefined,
+) {
   const input: NextMeetingLookupInput = {}
   if (userId) input.userId = userId
   if (email) input.email = email
+  if (phoneNumber) input.phoneNumber = phoneNumber
   return input
 }
 

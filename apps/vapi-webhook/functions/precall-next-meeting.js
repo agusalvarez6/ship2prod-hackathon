@@ -28,6 +28,7 @@ module.exports = async function (request) {
       return json(
         await loadNextMeeting({
           userId: url.searchParams.get('userId') ?? undefined,
+          phoneNumber: url.searchParams.get('phoneNumber') ?? undefined,
           email: url.searchParams.get('email') ?? undefined,
         }),
         200,
@@ -50,11 +51,13 @@ module.exports = async function (request) {
 
     const body = parsedBody.value
     const calls = extractVapiToolCalls(body).filter((call) => call.name === 'getNextMeeting')
+    const callerPhoneNumber = extractVapiCallerNumber(body)
 
     if (calls.length === 0) {
       return json(
         await loadNextMeeting({
           userId: typeof body.userId === 'string' ? body.userId : undefined,
+          phoneNumber: typeof body.phoneNumber === 'string' ? body.phoneNumber : undefined,
           email: typeof body.email === 'string' ? body.email : undefined,
         }),
         200,
@@ -66,10 +69,12 @@ module.exports = async function (request) {
     for (const call of calls) {
       results.push({
         toolCallId: call.id,
-        result: await loadNextMeeting({
-          userId: typeof call.parameters.userId === 'string' ? call.parameters.userId : undefined,
-          email: typeof call.parameters.email === 'string' ? call.parameters.email : undefined,
-        }),
+        result: await loadNextMeeting(
+          {
+            phoneNumber: callerPhoneNumber ?? undefined,
+          },
+          { allowDefaultUser: false },
+        ),
       })
     }
 
@@ -86,7 +91,7 @@ module.exports = async function (request) {
   }
 }
 
-async function loadNextMeeting(input) {
+async function loadNextMeeting(input, options = {}) {
   const { createClient } = await import('npm:@insforge/sdk')
   const client = createClient({
     baseUrl: Deno.env.get('INSFORGE_BASE_URL') || INSFORGE_BASE_URL,
@@ -94,7 +99,7 @@ async function loadNextMeeting(input) {
   })
 
   const now = new Date()
-  const user = await resolveUser(client, input)
+  const user = await resolveUser(client, input, options)
   if (!user) {
     return { meeting: null, voiceSummary: 'I do not see an upcoming meeting for this caller.' }
   }
@@ -133,13 +138,26 @@ async function loadNextMeeting(input) {
   return { meeting, voiceSummary: summarizeForVoice(meeting) }
 }
 
-async function resolveUser(client, input) {
+async function resolveUser(client, input, options = {}) {
   const userId = typeof input.userId === 'string' && input.userId ? input.userId : null
   if (userId) {
     const { data, error } = await client.database
       .from('users')
       .select('id,email')
       .eq('id', userId)
+      .limit(1)
+    if (error) throw new Error(`user lookup failed: ${error.message}`)
+    if (Array.isArray(data) && data[0]) return data[0]
+  }
+
+  const phoneNumber = normalizePhoneNumberE164(
+    typeof input.phoneNumber === 'string' ? input.phoneNumber : '',
+  )
+  if (phoneNumber) {
+    const { data, error } = await client.database
+      .from('users')
+      .select('id,email')
+      .eq('phone_number_e164', phoneNumber)
       .limit(1)
     if (error) throw new Error(`user lookup failed: ${error.message}`)
     if (Array.isArray(data) && data[0]) return data[0]
@@ -154,6 +172,8 @@ async function resolveUser(client, input) {
     if (error) throw new Error(`user lookup failed: ${error.message}`)
     if (Array.isArray(data) && data[0]) return data[0]
   }
+
+  if (options.allowDefaultUser === false) return null
 
   const defaultUserId = Deno.env.get('PRECALL_DEFAULT_USER_ID') || DEMO_USER_ID
   if (defaultUserId) {
@@ -264,6 +284,43 @@ function extractVapiToolCalls(value) {
       },
     ]
   })
+}
+
+function extractVapiCallerNumber(value) {
+  if (!isRecord(value)) return null
+  const message = isRecord(value.message) ? value.message : value
+  const candidates = [
+    nestedString(message, ['call', 'customer', 'number']),
+    nestedString(value, ['call', 'customer', 'number']),
+    nestedString(message, ['customer', 'number']),
+    nestedString(value, ['customer', 'number']),
+    nestedString(message, ['call', 'phoneCallProviderDetails', 'from']),
+    nestedString(value, ['call', 'phoneCallProviderDetails', 'from']),
+  ]
+  return candidates.find((candidate) => candidate && candidate.trim()) || null
+}
+
+function nestedString(value, path) {
+  let current = value
+  for (const key of path) {
+    if (!isRecord(current)) return null
+    current = current[key]
+  }
+  return typeof current === 'string' ? current : null
+}
+
+function normalizePhoneNumberE164(input) {
+  const trimmed = input.trim()
+  if (!trimmed || /[A-Za-z]/.test(trimmed)) return null
+  const digits = trimmed.replace(/\D/g, '')
+  const normalized = trimmed.startsWith('+')
+    ? `+${digits}`
+    : digits.length === 10
+      ? `+1${digits}`
+      : digits.length === 11 && digits.startsWith('1')
+        ? `+${digits}`
+        : null
+  return normalized && /^\+[1-9]\d{7,14}$/.test(normalized) ? normalized : null
 }
 
 function parseParameters(value) {

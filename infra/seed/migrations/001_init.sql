@@ -22,10 +22,14 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS users (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email                TEXT NOT NULL UNIQUE,
+  phone_number_e164    TEXT,
   google_refresh_token TEXT,
   notion_token         TEXT,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone_number_e164
+  ON users (phone_number_e164)
+  WHERE phone_number_e164 IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS meetings (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,4 +1,5 @@
 import pg from 'pg'
+import { normalizePhoneNumberE164 } from '@ship2prod/schema/phone'
 
 const { Pool } = pg
 
@@ -49,12 +50,14 @@ export interface NextMeeting {
 
 export interface NextMeetingLookup {
   userId: string | null
+  phoneNumberE164: string | null
   email: string | null
   now: Date
 }
 
 export interface NextMeetingLookupInput {
   userId?: string
+  phoneNumber?: string
   email?: string
 }
 
@@ -126,9 +129,15 @@ LEFT JOIN LATERAL (
 WHERE
   (
     ($1::uuid IS NOT NULL AND m.user_id = $1::uuid)
-    OR ($1::uuid IS NULL AND $2::text IS NOT NULL AND lower(u.email) = lower($2::text))
+    OR ($1::uuid IS NULL AND $2::text IS NOT NULL AND u.phone_number_e164 = $2::text)
+    OR (
+      $1::uuid IS NULL
+      AND $2::text IS NULL
+      AND $3::text IS NOT NULL
+      AND lower(u.email) = lower($3::text)
+    )
   )
-  AND m.starts_at >= $3::timestamptz
+  AND m.starts_at >= $4::timestamptz
 ORDER BY m.starts_at ASC
 LIMIT 1
 `
@@ -152,6 +161,7 @@ export function createPostgresNextMeetingRepository(
         }
         const result = await client.query<NextMeetingRow>(NEXT_MEETING_SQL, [
           lookup.userId,
+          lookup.phoneNumberE164,
           lookup.email,
           lookup.now.toISOString(),
         ])
@@ -172,31 +182,52 @@ export function parseNextMeetingLookup(
   options: LookupOptions,
 ): LookupParseResult {
   const userIdInput = cleanString(input.userId)
+  const phoneInput = cleanString(input.phoneNumber)
   const emailInput = cleanString(input.email)
 
   if (userIdInput) {
     if (!isUuid(userIdInput)) {
       return { ok: false, status: 400, message: 'userId must be a valid UUID' }
     }
-    return { ok: true, lookup: { userId: userIdInput, email: null, now: options.now } }
+    return {
+      ok: true,
+      lookup: { userId: userIdInput, phoneNumberE164: null, email: null, now: options.now },
+    }
+  }
+
+  if (phoneInput) {
+    const phoneNumber = normalizePhoneNumberE164(phoneInput)
+    if (!phoneNumber) {
+      return { ok: false, status: 400, message: 'phoneNumber must be a valid phone number' }
+    }
+    return {
+      ok: true,
+      lookup: { userId: null, phoneNumberE164: phoneNumber, email: null, now: options.now },
+    }
   }
 
   if (emailInput) {
     if (!isEmailLike(emailInput)) {
       return { ok: false, status: 400, message: 'email must be a valid email address' }
     }
-    return { ok: true, lookup: { userId: null, email: emailInput, now: options.now } }
+    return {
+      ok: true,
+      lookup: { userId: null, phoneNumberE164: null, email: emailInput, now: options.now },
+    }
   }
 
   if (!options.defaultUserId) {
-    return { ok: false, status: 400, message: 'userId or email is required' }
+    return { ok: false, status: 400, message: 'caller phone number is required' }
   }
 
   if (!isUuid(options.defaultUserId)) {
     return { ok: false, status: 400, message: 'default user id is not a valid UUID' }
   }
 
-  return { ok: true, lookup: { userId: options.defaultUserId, email: null, now: options.now } }
+  return {
+    ok: true,
+    lookup: { userId: options.defaultUserId, phoneNumberE164: null, email: null, now: options.now },
+  }
 }
 
 export function summarizeForVoice(meeting: NextMeeting | null): string {

@@ -1,26 +1,32 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { SESSION_COOKIE, verifySession } from "@/lib/session";
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { SESSION_COOKIE, verifySession } from '@/lib/session'
+import { getUserById } from '@/lib/users'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export default async function LandingPage({
   searchParams,
 }: {
-  searchParams?: { oauthError?: string };
+  searchParams?: { oauthError?: string }
 }): Promise<JSX.Element> {
-  const cookieStore = cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const cookieStore = cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
   if (token) {
+    let session = null
     try {
-      await verifySession(token);
-      redirect("/dashboard");
+      session = await verifySession(token)
     } catch {
       // Fall through to the landing page if the cookie is stale or tampered.
     }
+    if (session) {
+      const user = await getUserById(session.sub)
+      if (user?.phone_number_e164) redirect('/dashboard')
+      if (user) redirect('/onboarding')
+    }
   }
 
-  const errorTag = searchParams?.oauthError ?? null;
+  const errorTag = searchParams?.oauthError ?? null
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
@@ -53,5 +59,5 @@ export default async function LandingPage({
         </p>
       </section>
     </main>
-  );
+  )
 }
