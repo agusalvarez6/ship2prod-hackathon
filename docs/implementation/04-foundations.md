@@ -6,6 +6,8 @@ started: 2026-04-24
 
 # 04 — Foundations
 
+> **Scope clarification (2026-04-24):** foundations = monorepo setup only. All Wave 1 `feat(...)` commits reverted in `af56112`. App services (`apps/graph`, `apps/vapi-webhook`, `apps/worker`, `apps/web`) and the `@ship2prod/integrations` + `@ship2prod/sdk` packages are out of scope.
+
 ## Mandate
 do the Foundations so that we can start developing in parallel
 
@@ -23,20 +25,22 @@ Dispatched 2026-04-24 T+0. Disjoint file ownership across five tracks.
 | W0-D test harness | swe-04 | `c4581b9` | vitest + globalSetup + MSW + docker-compose.test.yml; 87/88 tests (1 docker-gated) |
 | W0-E SQL + seeds + Docker + compose | swe-05 | `b7239c1` | infra/seed/* (InsForge schema + fixture briefing UUID 11111111-2222-3333-4444-555555555555), docker/* (Chainguard base), docker-compose.yml |
 
-**Wave 0 sealed 2026-04-24 by engineering-manager-01.** All five tracks landed; Wave 1 dispatch cleared.
+**Wave 0 sealed 2026-04-24 by engineering-manager-01.** All five tracks landed.
 
-### Wave 1 — partial (halted)
+### Wave 1 — reverted
 
-Halted 2026-04-24 per user scope clarification: mandate bounded to monorepo setup, not app services. W1-F and W1-G landed before halt; W1-H / W1-I / W1-J / W1-K were in flight and discarded uncommitted.
+All Wave 1 `feat(...)` commits reverted in a single combined revert after user scope clarification.
 
-| Track | Owner | Commit | Notes |
-|-------|-------|--------|-------|
-| W1-F `@ship2prod/integrations` | swe-02-w1 | `2200071` | 4 client interfaces (LLM / TinyFish / Notion / GCal) + not-implemented factories; 12 tests |
-| W1-G `@ship2prod/sdk` | swe-03-w1 | `1697d24` | PrecallClient with 9 methods; MSW happy-path test |
-| W1-H `apps/graph` | swe-04-w1 | HALTED | uncommitted; discarded per user scope clarification |
-| W1-I `apps/vapi-webhook` | swe-05-w1 | HALTED | uncommitted; discarded |
-| W1-J `apps/worker` | swe-06 | HALTED | uncommitted; discarded |
-| W1-K `apps/web` | swe-07 | HALTED | uncommitted; discarded |
+| Reverted SHA | Subject |
+|--------------|---------|
+| `02f1c85` | feat(vapi-webhook): scaffold Hono webhook with stub middleware |
+| `d26eff4` | feat(web): scaffold Next.js app with fixture briefing viewer |
+| `92ece0c` | feat(graph): scaffold Hono + yoga subgraph with getBriefing fixture |
+| `cc15ef8` | feat(worker): scaffold BLMOVE loop + pipeline stubs |
+| `1697d24` | feat(sdk): scaffold @ship2prod/sdk with PrecallClient |
+| `2200071` | feat(integrations): scaffold client interfaces and factories |
+
+Revert commit: `af56112` revert: Wave 1 out-of-scope packages and apps.
 
 ### Wave 2 — cancelled
 
@@ -55,20 +59,22 @@ Captured during Wave 0:
 
 ## Outcome
 
-Foundations branch delivers the complete monorepo:
+Foundations branch delivers the monorepo setup:
 
 - pnpm workspace + TS strict + lint + format (W0-A)
-- Shared packages: `@ship2prod/schema`, `@ship2prod/errors`, `@ship2prod/integrations` (interfaces + not-implemented factories), `@ship2prod/sdk` (PrecallClient stub)
+- Shared packages: `@ship2prod/schema`, `@ship2prod/errors`
 - Test harness: vitest + globalSetup + MSW + docker-compose.test.yml with Redis + Postgres
 - SQL migration + Sarah/Ramp fixture briefing (UUID 11111111-2222-3333-4444-555555555555)
 - Chainguard base image + healthcheck + docker-compose.yml
 
-App services (`apps/graph`, `apps/vapi-webhook`, `apps/worker`, `apps/web`) are out of scope per user.
-
 ## Quality gates
-_Populated as inspectors run._
+
+Post-revert verification at HEAD `af56112` (2026-04-24):
+
+- `pnpm install` — ok, lockfile clean, no delta to commit
+- `pnpm lint` — green
+- `pnpm typecheck` — green
 
 ## PR
 
 - #1 — https://github.com/agusalvarez6/ship2prod-hackathon/pull/1 (draft, opened 2026-04-24)
-- Wave 1 halted 2026-04-24. Awaiting team-lead + user ruling on whether to revert `2200071` + `1697d24` (the two Wave 1 package commits that landed before stop) or keep them.
