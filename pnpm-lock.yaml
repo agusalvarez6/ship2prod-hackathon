@@ -65,10 +65,19 @@ importers:
       hono:
         specifier: ^4.6.0
         version: 4.12.15
+      ioredis:
+        specifier: ^5.4.1
+        version: 5.10.1
+      pg:
+        specifier: ^8.12.0
+        version: 8.20.0
     devDependencies:
       '@types/node':
         specifier: ^20
         version: 20.19.39
+      '@types/pg':
+        specifier: ^8.11.6
+        version: 8.20.0
       typescript:
         specifier: ^5
         version: 5.9.3
