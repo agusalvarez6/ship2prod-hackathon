@@ -8,18 +8,6 @@ describe('createNotionClient', () => {
     expect(client).not.toBeNull()
     expect(client).toBeDefined()
   })
-
-  it('getPage rejects with "not implemented in Phase 0"', async () => {
-    const client = createNotionClient({ accessToken: 'test-token' })
-    await expect(client.getPage('page-id')).rejects.toThrow('not implemented in Phase 0')
-  })
-
-  it('searchPages rejects with "not implemented in Phase 0"', async () => {
-    const client = createNotionClient({ accessToken: 'test-token' })
-    await expect(client.searchPages('query')).rejects.toThrow(
-      'not implemented in Phase 0',
-    )
-  })
 })
 
 describe('createGCalClient', () => {

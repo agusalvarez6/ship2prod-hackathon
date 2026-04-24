@@ -14,7 +14,12 @@ describe('UsersRowSchema', () => {
     const row = {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       email: 'demo@precall.app',
+      google_sub: null,
       google_refresh_token: null,
+      google_access_token: null,
+      google_access_token_expires_at: null,
+      display_name: null,
+      picture_url: null,
       notion_token: null,
       created_at: '2026-04-24T10:00:00.000Z',
     }
@@ -25,11 +30,48 @@ describe('UsersRowSchema', () => {
     const bad = {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       email: 'not-an-email',
+      google_sub: null,
       google_refresh_token: null,
+      google_access_token: null,
+      google_access_token_expires_at: null,
+      display_name: null,
+      picture_url: null,
       notion_token: null,
       created_at: '2026-04-24T10:00:00.000Z',
     }
     expect(UsersRowSchema.safeParse(bad).success).toBe(false)
+  })
+
+  it('accepts a row with all new Google OAuth columns null', () => {
+    const row = {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      email: 'demo@precall.app',
+      google_sub: null,
+      google_refresh_token: null,
+      google_access_token: null,
+      google_access_token_expires_at: null,
+      display_name: null,
+      picture_url: null,
+      notion_token: null,
+      created_at: '2026-04-24T10:00:00.000Z',
+    }
+    expect(UsersRowSchema.safeParse(row).success).toBe(true)
+  })
+
+  it('accepts a row with all new Google OAuth columns populated', () => {
+    const row = {
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      email: 'user@example.com',
+      google_sub: '106839928463728910573',
+      google_refresh_token: '1//0gRefreshTokenExample',
+      google_access_token: 'ya29.AccessTokenExample',
+      google_access_token_expires_at: '2026-04-24T11:00:00.000Z',
+      display_name: 'Ada Lovelace',
+      picture_url: 'https://lh3.googleusercontent.com/a/example',
+      notion_token: null,
+      created_at: '2026-04-24T10:00:00.000Z',
+    }
+    expect(UsersRowSchema.safeParse(row).success).toBe(true)
   })
 })
 
