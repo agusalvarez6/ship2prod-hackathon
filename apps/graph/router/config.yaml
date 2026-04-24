@@ -1,0 +1,25 @@
+version: "1"
+
+listen_addr: "0.0.0.0:3002"
+
+graphql_path: "/graphql"
+playground_enabled: true
+introspection_enabled: true
+
+router_config_path: /etc/router/config.json
+
+mcp:
+  enabled: true
+  server:
+    listen_addr: "0.0.0.0:5025"
+
+cors:
+  allow_origins:
+    - "*"
+  allow_methods:
+    - GET
+    - POST
+    - OPTIONS
+  allow_headers:
+    - Content-Type
+    - Authorization

@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@ship2prod/sdk", "@ship2prod/schema", "@ship2prod/errors"],
   experimental: {
     serverComponentsExternalPackages: ["pg", "ioredis"],
   },

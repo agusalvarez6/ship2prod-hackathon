@@ -1,0 +1,19 @@
+mutation saveCallTranscript(
+  $briefingId: ID
+  $vapiCallId: String!
+  $recordingUrl: String
+  $transcript: JSON!
+  $startedAt: DateTime
+  $endedAt: DateTime
+) {
+  saveCallTranscript(
+    briefingId: $briefingId
+    vapiCallId: $vapiCallId
+    recordingUrl: $recordingUrl
+    transcript: $transcript
+    startedAt: $startedAt
+    endedAt: $endedAt
+  ) {
+    id
+  }
+}
