@@ -1,0 +1,52 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Deploy InsForge edge function
+        env:
+          INSFORGE_URL: ${{ secrets.INSFORGE_URL }}
+          INSFORGE_API_KEY: ${{ secrets.INSFORGE_API_KEY }}
+        run: pnpm deploy:insforge:function
+
+      - name: Configure Vapi PreCallBot
+        env:
+          VAPI_PRIVATE_KEY: ${{ secrets.VAPI_PRIVATE_KEY }}
+          VAPI_ASSISTANT_ID: ${{ secrets.VAPI_ASSISTANT_ID }}
+          VAPI_PRECALLBOT_TOOL_ID: ${{ secrets.VAPI_PRECALLBOT_TOOL_ID }}
+          PRECALL_INTERNAL_API_KEY: ${{ secrets.PRECALL_INTERNAL_API_KEY }}
+          PRECALL_TOOL_URL: ${{ secrets.PRECALL_TOOL_URL }}
+          PRECALL_PUBLIC_BASE_URL: ${{ secrets.PRECALL_PUBLIC_BASE_URL }}
+          VAPI_WEBHOOK_URL: ${{ secrets.VAPI_WEBHOOK_URL }}
+        run: pnpm --filter @ship2prod/vapi-webhook configure:precallbot

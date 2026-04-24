@@ -3,7 +3,6 @@ import type {
   BlockObjectResponse,
   PageObjectResponse,
   PartialBlockObjectResponse,
-  PartialPageObjectResponse,
   QueryDatabaseParameters,
   RichTextItemResponse,
 } from '@notionhq/client/build/src/api-endpoints.js'
@@ -143,10 +142,7 @@ function clampPageSize(n: number | undefined): number {
   return Math.min(100, Math.max(1, Math.floor(n)))
 }
 
-async function readBlockTree(
-  notion: Pick<Client, 'blocks'>,
-  blockId: string,
-): Promise<string> {
+async function readBlockTree(notion: Pick<Client, 'blocks'>, blockId: string): Promise<string> {
   const lines: string[] = []
   let cursor: string | undefined
   do {

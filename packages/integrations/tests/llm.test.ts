@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { createLLMClient } from '../src/llm.js'
 
-const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_MODEL = 'gemini-2.5-flash'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 const server = setupServer()
@@ -55,7 +55,7 @@ describe('createLLMClient.synthesize', () => {
         ],
       },
     ])
-    expect(capturedBody.generationConfig?.maxOutputTokens).toBe(2048)
+    expect(capturedBody.generationConfig?.maxOutputTokens).toBe(8192)
     expect(capturedBody.generationConfig?.temperature).toBe(0)
   })
 })
