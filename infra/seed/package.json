@@ -1,0 +1,19 @@
+{
+  "name": "@ship2prod/seed",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@ship2prod/schema": "workspace:*",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.6",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

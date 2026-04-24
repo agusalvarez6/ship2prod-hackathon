@@ -9,13 +9,20 @@
 .env
 .env.local
 .env*.local
+*.local
 
 # Node
 node_modules/
 .next/
 out/
 dist/
+coverage/
+.turbo/
+.pnpm-store/
 *.log
+
+# TS incremental
+*.tsbuildinfo
 
 # Python
 __pycache__/
@@ -25,6 +32,6 @@ venv/
 *.sqlite3
 .cursor/
 
-# Claude Code tooling — not checked into this repo
+# Claude Code tooling. Not checked into this repo.
 .claude/
 .claude-ws/

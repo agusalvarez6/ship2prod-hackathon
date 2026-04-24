@@ -1,0 +1,161 @@
+# docker-compose.yml
+#
+# Dev and demo stack for PreCall. The test stack lives in
+# docker-compose.test.yml, owned by the test harness (swe-04). Keeping
+# test-only services in their own file avoids host-port collisions with
+# the dev stack.
+#
+# Services in the default profile:
+#   - postgres (15-alpine): InsForge database. Auto-applies
+#     infra/seed/migrations then infra/seed/seed at first init via the
+#     docker-entrypoint-initdb.d mount pattern from master §8.6.
+#   - redis (7-alpine): queue + idempotency + progress bus.
+#   - insforge: self-hosted Postgres + PostgREST + JWT auth, front of house.
+#
+# Services declared with profile "apps" are structural placeholders for
+# Wave 1. Their build contexts point at the Dockerfiles that Wave 1
+# will create; Wave 1 SWEs only need to edit the build blocks, not the
+# skeleton around them. Bring the app stack up with:
+#   docker compose --profile apps up -d
+#
+# Test harness is independent:
+#   docker compose -f docker-compose.test.yml up -d
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: insforge
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/seed/migrations:/docker-entrypoint-initdb.d/01-migrations:ro
+      - ./infra/seed/seed:/docker-entrypoint-initdb.d/02-seed:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d insforge"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  insforge:
+    # InsForge bundles Postgres + PostgREST + JWT auth. We run Postgres as
+    # its own service above; this container fronts PostgREST and auth
+    # against that database. Image tag is tracked by Wave 1 once the
+    # deploy pass pins a digest.
+    image: insforge/insforge:latest
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/insforge
+      INSFORGE_JWT_SECRET: ${INSFORGE_JWT_SECRET:-change-me-32-characters-minimum-xyz}
+      INSFORGE_ADMIN_EMAIL: ${INSFORGE_ADMIN_EMAIL:-demo@precall.app}
+      INSFORGE_ADMIN_PASSWORD: ${INSFORGE_ADMIN_PASSWORD:-change-me}
+    ports:
+      - "7130:7130"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Wave 1 app services. Build contexts are stubbed so Wave 1 only edits
+  # the dockerfile path. Each service declares `profiles: ["apps"]` so it
+  # does not start with the default `docker compose up` until Wave 1
+  # lands the Dockerfiles.
+  graph:
+    profiles: ["apps"]
+    build:
+      # Wave 1 (Track D): apps/graph/Dockerfile
+      context: .
+      dockerfile: apps/graph/Dockerfile
+    ports:
+      - "4001:4001"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/insforge
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  router:
+    profiles: ["apps"]
+    # Wave 1 (Track D): pin ghcr.io/wundergraph/cosmo/router to a digest.
+    image: ghcr.io/wundergraph/cosmo/router:latest
+    ports:
+      - "3002:3002"
+      - "5025:5025"
+    environment:
+      ROUTER_CONFIG_PATH: /etc/router/config.yaml
+      SUBGRAPH_URL: http://graph:4001/graphql
+    volumes:
+      - ./apps/graph/router:/etc/router:ro
+    depends_on:
+      - graph
+
+  vapi-webhook:
+    profiles: ["apps"]
+    build:
+      # Wave 1 (Track E): apps/vapi-webhook/Dockerfile, extends
+      # docker/chainguard.base.Dockerfile.
+      context: .
+      dockerfile: apps/vapi-webhook/Dockerfile
+      args:
+        APP_PATH: apps/vapi-webhook
+    ports:
+      - "8787:8787"
+    environment:
+      REDIS_URL: redis://redis:6379
+      COSMO_ROUTER_URL: http://router:3002/graphql
+    depends_on:
+      redis:
+        condition: service_healthy
+      router:
+        condition: service_started
+
+  worker:
+    profiles: ["apps"]
+    build:
+      # Wave 1 (Track F): apps/worker/Dockerfile, extends
+      # docker/chainguard.base.Dockerfile.
+      context: .
+      dockerfile: apps/worker/Dockerfile
+      args:
+        APP_PATH: apps/worker
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/insforge
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  web:
+    profiles: ["apps"]
+    build:
+      # Wave 1 (Track G): apps/web/Dockerfile (Next.js standalone output).
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_COSMO_ROUTER_URL: http://localhost:3002/graphql
+    depends_on:
+      - router
+
+volumes:
+  postgres-data:
+  redis-data:
