@@ -1,0 +1,59 @@
+{
+  "meetings": [
+    {
+      "userId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "accountEmail": "demo@precall.app",
+      "meeting": {
+        "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "title": "Intro with Sarah from Ramp",
+        "startsAt": "2026-04-24T21:30:00Z",
+        "description": "Intro call to discuss Ramp card program and spend controls.",
+        "attendees": [
+          {
+            "email": "sarah@ramp.com",
+            "displayName": "Sarah Chen",
+            "organizer": false
+          },
+          {
+            "email": "demo@precall.app",
+            "displayName": "You",
+            "organizer": true
+          }
+        ],
+        "contact": {
+          "name": "Sarah Chen",
+          "email": "sarah@ramp.com",
+          "role": "Account Executive"
+        },
+        "company": {
+          "name": "Ramp",
+          "domain": "ramp.com",
+          "summary": "Corporate card and spend management platform. Automates expense policy, bill pay, and accounting workflows for finance teams."
+        },
+        "briefing": {
+          "id": "11111111-2222-3333-4444-555555555555",
+          "status": "ready",
+          "summary60s": "Sarah Chen is an AE at Ramp, a finance automation platform focused on corporate cards, spend controls, and bill pay. Lead with total spend visibility and close with the accounting automations your team already notes in Notion.",
+          "suggestedOpeningLine": "Sarah, thanks for making time. I want to skip the overview and use the 30 minutes to pressure-test whether Ramp fits our QuickBooks setup and policy library. Cool if I start with how our controller is thinking about this?",
+          "questionsToAsk": [
+            "How does Ramp's QuickBooks sync handle class and location tags on card transactions?",
+            "What does the policy migration look like when we come off an existing corporate card program?",
+            "Which customers closest to our size cut receipt-chasing time with Ramp, and by how much?",
+            "What is the realistic timeline from signed contract to cards issued and first statement closed?",
+            "If we want Ramp Bill Pay next quarter, what does pricing look like at our AP volume?"
+          ],
+          "likelyPainPoints": [
+            "Migration friction from re-keying vendor records and policy rules.",
+            "QuickBooks sync edge cases around class, location, and custom fields.",
+            "Change management for employees used to the current card workflow."
+          ],
+          "risks": [
+            "Procurement and legal review could push a close into Q4 if the MSA is not standard.",
+            "Sarah may keep Ramp Plus and Bill Pay pricing vague until late-stage."
+          ],
+          "followUpEmail": "Hi Sarah, thanks for the intro call. Quick recap: spend visibility sounds strong, QuickBooks sync needs a technical check, and we need written pricing for Ramp Plus and Bill Pay before taking this to the controller."
+        }
+      }
+    }
+  ]
+}
