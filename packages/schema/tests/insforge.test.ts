@@ -14,6 +14,7 @@ describe('UsersRowSchema', () => {
     const row = {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       email: 'demo@precall.app',
+      phone_number_e164: '+14155552671',
       google_sub: null,
       google_refresh_token: null,
       google_access_token: null,
@@ -30,6 +31,7 @@ describe('UsersRowSchema', () => {
     const bad = {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       email: 'not-an-email',
+      phone_number_e164: null,
       google_sub: null,
       google_refresh_token: null,
       google_access_token: null,
@@ -46,6 +48,7 @@ describe('UsersRowSchema', () => {
     const row = {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       email: 'demo@precall.app',
+      phone_number_e164: null,
       google_sub: null,
       google_refresh_token: null,
       google_access_token: null,
@@ -62,6 +65,7 @@ describe('UsersRowSchema', () => {
     const row = {
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       email: 'user@example.com',
+      phone_number_e164: '+14155552671',
       google_sub: '106839928463728910573',
       google_refresh_token: '1//0gRefreshTokenExample',
       google_access_token: 'ya29.AccessTokenExample',

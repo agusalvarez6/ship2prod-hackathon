@@ -71,7 +71,7 @@ const NOTION_ERROR_COPY: Record<string, string> = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { notionConnected?: string; notionError?: string };
+  searchParams?: { notionConnected?: string; notionError?: string; onboarded?: string };
 }): Promise<JSX.Element> {
   const cookieStore = cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
@@ -86,11 +86,13 @@ export default async function DashboardPage({
 
   const user = await getUserById(session.sub);
   if (!user) redirect("/");
+  if (!user.phone_number_e164) redirect("/onboarding");
 
   const notionToken = await getNotionToken(user.id);
   const notionConnected = Boolean(notionToken);
   const notionError = searchParams?.notionError ?? null;
   const justConnected = searchParams?.notionConnected === "1";
+  const justOnboarded = searchParams?.onboarded === "1";
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -125,13 +127,22 @@ export default async function DashboardPage({
               {(user.display_name ?? user.email).slice(0, 1).toUpperCase()}
             </div>
           )}
-          <div>
+          <div className="min-w-0">
             <p className="text-lg font-medium text-ink-900">
               {user.display_name ?? user.email}
             </p>
             <p className="text-sm text-ink-600">{user.email}</p>
+            <p className="mt-1 font-mono text-xs text-ink-500">{user.phone_number_e164}</p>
           </div>
         </div>
+
+        {justOnboarded ? (
+          <div className="mt-5 rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-900">
+            Phone access is connected. Calls from{" "}
+            <span className="font-mono">{user.phone_number_e164}</span> will resolve to this
+            account.
+          </div>
+        ) : null}
       </section>
 
       <h2 className="mt-10 text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-500">

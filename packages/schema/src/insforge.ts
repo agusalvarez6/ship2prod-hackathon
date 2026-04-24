@@ -5,6 +5,10 @@ export const UsersRowSchema = z
   .object({
     id: z.string().uuid(),
     email: z.string().email(),
+    phone_number_e164: z
+      .string()
+      .regex(/^\+[1-9]\d{7,14}$/)
+      .nullable(),
     google_sub: z.string().nullable(),
     google_refresh_token: z.string().nullable(),
     google_access_token: z.string().nullable(),
