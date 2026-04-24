@@ -9,7 +9,7 @@ import { emitProgress } from './progress.js'
 const redis = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379')
 const pool = createPool()
 const tinyfish = createTinyFishClient({ apiKey: process.env['TINYFISH_API_KEY'] ?? '' })
-const llm = createLLMClient({ apiKey: process.env['ANTHROPIC_API_KEY'] ?? '' })
+const llm = createLLMClient({ apiKey: process.env['GEMINI_API_KEY'] ?? '' })
 
 let shuttingDown = false
 let inflight = 0
