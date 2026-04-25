@@ -294,7 +294,7 @@ function BriefingSections({ sections }: { sections: Record<string, unknown> }): 
       ) : null}
 
       {s.internalContext?.notionExcerpts && s.internalContext.notionExcerpts.length > 0 ? (
-        <Card title="From your Notion">
+        <Card title="From your workspace context">
           <ul className="flex flex-col gap-2">
             {s.internalContext.notionExcerpts.map((n, i) => (
               <li key={i} className="rounded-lg border border-ink-200 bg-ink-50 p-3">

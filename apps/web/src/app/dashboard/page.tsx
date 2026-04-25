@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SESSION_COOKIE, verifySession } from "@/lib/session";
 import { getUserById } from "@/lib/users";
-import { getNotionToken } from "@/lib/notion-users";
 
 export const dynamic = "force-dynamic";
 
@@ -59,19 +58,10 @@ function ConnectionCard({
   );
 }
 
-const NOTION_ERROR_COPY: Record<string, string> = {
-  access_denied: "You cancelled the Notion connect flow.",
-  code_missing: "Notion did not return an authorization code.",
-  code_exchange_failed: "Notion rejected the authorization code. Try again.",
-  state_missing: "This connect link expired. Start again.",
-  session_mismatch: "The Notion grant was for a different signed-in user.",
-  db_unavailable: "Could not save the Notion token. Try again in a moment.",
-};
-
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { notionConnected?: string; notionError?: string; onboarded?: string };
+  searchParams?: { onboarded?: string };
 }): Promise<JSX.Element> {
   const cookieStore = cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
@@ -88,10 +78,6 @@ export default async function DashboardPage({
   if (!user) redirect("/");
   if (!user.phone_number_e164) redirect("/onboarding");
 
-  const notionToken = await getNotionToken(user.id);
-  const notionConnected = Boolean(notionToken);
-  const notionError = searchParams?.notionError ?? null;
-  const justConnected = searchParams?.notionConnected === "1";
   const justOnboarded = searchParams?.onboarded === "1";
 
   return (
@@ -148,7 +134,7 @@ export default async function DashboardPage({
         Connections
       </h2>
 
-      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-3 grid max-w-xl grid-cols-1 gap-4">
         <ConnectionCard
           title="Google Calendar"
           description="PreCallBot reads your primary calendar so it can surface upcoming meetings and pre-brief each one."
@@ -171,54 +157,6 @@ export default async function DashboardPage({
                   Disconnect Google
                 </button>
               </form>
-            ) : null
-          }
-        />
-
-        <ConnectionCard
-          title="Notion workspace"
-          description="PreCallBot reads pages and calendar databases you share with it. You pick exactly which pages on Notion's consent screen."
-          connected={notionConnected}
-          primary={
-            notionConnected ? null : (
-              <a
-                href="/api/auth/notion/start"
-                className="rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-paper shadow-sm transition-colors hover:bg-accent-700"
-              >
-                Connect Notion
-              </a>
-            )
-          }
-          disconnect={
-            notionConnected ? (
-              <form action="/api/auth/notion/disconnect" method="post">
-                <button
-                  type="submit"
-                  className="rounded-md border border-ink-300 bg-paper px-4 py-2 text-sm text-ink-700 transition-colors hover:bg-ink-50"
-                >
-                  Disconnect Notion
-                </button>
-              </form>
-            ) : null
-          }
-          alert={
-            justConnected && !notionError ? (
-              <div className="rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-900">
-                Notion is connected. Reopen <span className="font-mono">Settings &rarr; Connections</span> in Notion
-                to add or remove shared pages later.
-              </div>
-            ) : notionError ? (
-              <div className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-900">
-                <p>
-                  {NOTION_ERROR_COPY[notionError] ??
-                    `Notion connect failed (code: ${notionError}).`}
-                </p>
-                <p className="mt-1">
-                  <a href="/api/auth/notion/start" className="text-accent-700 underline hover:text-accent-600">
-                    Try again
-                  </a>
-                </p>
-              </div>
             ) : null
           }
         />

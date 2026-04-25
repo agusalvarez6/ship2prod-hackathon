@@ -15,7 +15,7 @@ const slides = [
   {
     eyebrow: '01 / Problem',
     title: 'Meeting prep is scattered right before the call.',
-    body: 'PreCallBot turns calendar invites, Notion context, public research, and voice follow-ups into one tactical briefing.',
+    body: 'PreCallBot turns calendar invites, meeting context, public research, and voice follow-ups into one tactical briefing.',
     bullets: [
       'No more last-minute tab hunting.',
       'Private notes and public context stay tied to the meeting.',
@@ -29,7 +29,7 @@ const slides = [
     body: 'The user picks a meeting. PreCallBot reads the workspace context, researches the company, stores the briefing, and exposes it through the web app and voice.',
     bullets: [
       'Google Calendar finds the next meeting.',
-      'Notion and TinyFish provide private and public context.',
+      'Calendar context and TinyFish provide private and public context.',
       'InsForge, Redis, WunderGraph, and Vapi make it demo-ready.',
     ],
     kind: 'flow',
@@ -50,7 +50,7 @@ const slides = [
 function ProblemVisual(): JSX.Element {
   return (
     <div className="grid gap-3 text-sm text-ink-700">
-      {['Calendar invite', 'Notion notes', 'Company site', 'Voice Q&A'].map((label, index) => (
+      {['Calendar invite', 'Meeting notes', 'Company site', 'Voice Q&A'].map((label, index) => (
         <div
           key={label}
           className="flex min-h-14 items-center justify-between rounded-lg border border-ink-200 bg-paper px-4 shadow-sm"

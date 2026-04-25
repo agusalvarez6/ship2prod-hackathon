@@ -45,7 +45,7 @@ export default async function LandingPage({
           <ul className="mt-8 grid gap-3 text-sm text-ink-700">
             <li className="flex items-start gap-3">
               <span aria-hidden className="mt-2 h-1 w-4 rounded-full bg-accent-500" />
-              Reads your calendar and the relevant Notion pages.
+              Reads your calendar and the relevant meeting context.
             </li>
             <li className="flex items-start gap-3">
               <span aria-hidden className="mt-2 h-1 w-4 rounded-full bg-accent-500" />
